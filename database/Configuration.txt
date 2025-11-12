@@ -40,7 +40,7 @@ CREATE TABLE Activity (
 	endDate TEXT,
 	CHECK (startDate IS NULL OR endDate IS NULL OR endDate>=startDate)
 ) STRICT;
-// Note that Date should be stored in ISO-8601 format so that it can be easily compared.
+-- Note that Date should be stored in ISO-8601 format so that it can be easily compared.
 
 CREATE TABLE Company (
 	CompanyID INTEGER PRIMARY KEY,
@@ -60,8 +60,8 @@ CREATE TABLE Task (
 	ON UPDATE CASCADE
 	DEFERRABLE INITIALLY DEFERRED
 );
-// Note that Task Name has been shortend into Name
-// I have set ON DELETE CASCADE on Task
+-- Note that Task Name has been shortend into Name
+-- I have set ON DELETE CASCADE on Task
 
 CREATE TABLE Assigned (
 	WID INTEGER NOT NULL,
