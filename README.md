@@ -13,7 +13,7 @@
 
   I have uploaded the SQL scripts that are used to set up the database to database/Configuration.txt  
   
-  Note that:  
+  Kindly note that:  
   
   1. I have NOT set up indecies but attached the proposed script at the end of the file. I am not sure about these script, and they need to be discussed before being put into the dbms.  
     
