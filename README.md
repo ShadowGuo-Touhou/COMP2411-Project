@@ -11,7 +11,7 @@
 
 2025/11/12 Ziru
 
-  I have uploaded the SQL scripts that are used to set up the database to database/Configuration.txt  
+  I have uploaded the SQL script that is used to set up the database to database/configuration.sql 
   
   Kindly note that:  
   
@@ -25,4 +25,5 @@
 
   3. I will not upload the database file because git can only handle text files and attempting to upload binary files like a database might mess up the whole repo.  
         - It is recommended that we upload the db entries in text forms (or better, in SQL commands).  
-        - You can set up your own db using the SQL commands provided in database/Configuration.txt with SQLite. (https://sqlite.org/download.html)  
+        - You can set up your own db using the script (database/configuration.sql) with SQLite. (https://sqlite.org/download.html)  
+        - To run the script, type "./sqlite3.exe campus.db < configuration.db" in your terminal. Make sure that configuration.db is in your current directory.
