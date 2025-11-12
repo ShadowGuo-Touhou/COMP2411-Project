@@ -11,15 +11,17 @@
 
 2025/11/12 Ziru
 
-  I have uploaded the SQL scripts that are used to set up the database to database/Configuration.txt
+  I have uploaded the SQL scripts that are used to set up the database to database/Configuration.txt  
+  
+  Note that:  
+  
+    1. I have NOT set up indecies but attached the proposed script at the end of the file. I am not sure about these script, and they need to be discussed before being put into the dbms.  
     
-  Note that:
-    1. I have NOT set up indecies but attached the proposed script at the end of the file. I am not sure about these script, and they need to be discussed before being put into the dbms.
-    2. All date input MUST follow ISO-8601 format in order to facilitate comparision between dates and avoid ambiguity.
-        To be specific, the format is **YYYYMMDD + T + HHMMSS + Time Zone**
-        - For example, HKT 23:41:00, 12 November, 2025 should be represented as **20251112T234100+08**.
-        You can also store a date without a specific time. The format would be much simplier: **YYYYMMDD**.
-        - For example, 12 Nov 2025 should be represented as **20251112**.
-    3. I will not upload the database file because git can only handle text files and attempting to upload binary files like a database might mess up the whole repo.
-        - It is recommended that we upload the db entries in text forms (or better, in SQL commands).
-        - You can set up your own db using the SQL commands provided in database/Configuration.txt with SQLite. (https://sqlite.org/download.html)
+    2. All date input MUST follow ISO-8601 format in order to facilitate comparision between dates and avoid ambiguity.  
+        To be specific, the format is **YYYYMMDD + T + HHMMSS + Time Zone**  
+        - For example, HKT 23:41:00, 12 November, 2025 should be represented as **20251112T234100+08**.  
+        You can also store a date without a specific time. The format would be much simplier: **YYYYMMDD**.  
+        - For example, 12 Nov 2025 should be represented as **20251112**.  
+    3. I will not upload the database file because git can only handle text files and attempting to upload binary files like a database might mess up the whole repo.  
+        - It is recommended that we upload the db entries in text forms (or better, in SQL commands).  
+        - You can set up your own db using the SQL commands provided in database/Configuration.txt with SQLite. (https://sqlite.org/download.html)  
