@@ -21,4 +21,5 @@
 
 2025/11/17 Ruiyang
       1. Update GUI, completed the first tab. 
+      2. Updated GUI, completed the first and second tab.
 

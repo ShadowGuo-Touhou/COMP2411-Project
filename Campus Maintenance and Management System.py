@@ -5,24 +5,25 @@ from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 
 
-class SystemWindow(QMainWindow):
+class SystemWindow():
     
     def __init__(self, parent = None):
         """
         Initialize the main window
         """
-        super().__init__(parent)
         self.__initWindow()
         self.__initTab()
         self.__initTabOne()
-        self.show()
+        self.__initTabTwo()
+        self.mainWindow.show()
 
     def __initWindow(self):
+        self.mainWindow = QMainWindow()
         # set window title
-        self.setWindowTitle("Campus Maintenance and Management System")
+        self.mainWindow.setWindowTitle("Campus Maintenance and Management System")
         # set window size
         primaryScreenSize = QApplication.primaryScreen().size()
-        self.setMinimumSize(primaryScreenSize.width()//2, primaryScreenSize.height()//2)
+        self.mainWindow.setMinimumSize(primaryScreenSize.width()//2, primaryScreenSize.height()//2)
 
     def __initTab(self):
         """
@@ -35,7 +36,7 @@ class SystemWindow(QMainWindow):
         # make the position of tabs movable
         self._displayTab.setMovable(True)
         # make the position of of tab center of the main window
-        self.setCentralWidget(self._displayTab)
+        self.mainWindow.setCentralWidget(self._displayTab)
 
     def __initTabOne(self):
         """
@@ -91,6 +92,57 @@ class SystemWindow(QMainWindow):
         # add tab to the window
         self._displayTab.addTab(activityTab, "Activity list")
 
+    def __initTabTwo(self):
+        # create layout
+        reportTab = QWidget()
+        reportTabLayout = QVBoxLayout()
+        reportTab.setLayout(reportTabLayout)
+        # titles
+        title = QLabel("Generate System Reports")
+        title.setObjectName("Title")
+        reportTabLayout.addWidget(title)
+        title = QLabel("Generate pre-defined reports for administrative review.")
+        title.setObjectName("SecondaryText")
+        reportTabLayout.addWidget(title)
+
+        # sub Tab for buttons
+        buttonTab = QWidget()
+        buttonTabLayout = QHBoxLayout()
+        buttonTab.setLayout(buttonTabLayout)
+        buttonTab.setObjectName("SubTab2")
+        # create buttons
+        workDistribution = QPushButton("Worker Distribution")
+        mangerWorkload = QPushButton("Manager Workload")
+        outSource = QPushButton("Outsource Summary")
+        # add buttons
+        buttonTabLayout.addWidget(workDistribution)
+        buttonTabLayout.addWidget(mangerWorkload)
+        buttonTabLayout.addWidget(outSource)
+        # add button connect function
+        workDistribution.clicked.connect(self.displayWorkerDistribution)
+        mangerWorkload.clicked.connect(self.displayMangerWorkload)
+        outSource.clicked.connect(self.displayOutSource)
+
+        # add subtab
+        reportTabLayout.addWidget(buttonTab)
+        # add to tab
+        self._displayTab.addTab(reportTab, "Admin Report")
+
+        # sub tab for results
+        resultTab = QWidget()
+        self._resultTabLayout = QVBoxLayout()
+        resultTab.setLayout(self._resultTabLayout)
+        resultTab.setObjectName("SubTab")
+        # add text
+        text = QLabel("Result")
+        text.setObjectName("Title")
+        self._resultTabLayout.addWidget(text)
+
+        reportTabLayout.addWidget(resultTab)
+        
+        reportTabLayout.addStretch()
+
+
 #===========================Functional methods===================================================
     def getBuilding(self)->list:
         """
@@ -107,16 +159,56 @@ class SystemWindow(QMainWindow):
         """
         # create QTable view, see: https://www.pythonguis.com/tutorials/pyqt6-qtableview-modelviews-numpy-pandas/
         table = QTableView()
-        data = [[1,2,3],[4,5,6],[7,8,9],["A", "B", "C"],["A", "B", "C"],["A", "B", "C"],["A", "B", "C"],["A", "B", "C"],["A", "B", "C"]]
+        data = self.query("fuck you")
         model = TableModel(data)
         table.setModel(model)
         table.setShowGrid(False)
 
         return table
+  
+    def query(self, query) -> list:
+        """
+        Send a query to database and returns a list
+        Not completed yet
+        """
+        return [[1,2,3,4,5,6,7,8,9,10,11,12],[1,2,3,4,5,6,7,8,9,10,11,12],[1,2,3,4,5,6,7,8,9,10,11,12]]
 #==========================Connect methods============================================
     def __buildingSelected(self, s):
         print(s)
-
+    
+    def displayWorkerDistribution(self)->QTableView:
+        """
+        Get worker in each activities
+        Not COmpleted yet
+        """
+        table = QTableView()
+        table.setModel(TableModel(self.query("fuck")))
+        if self._resultTabLayout.count() == 2:
+            self._resultTabLayout.takeAt(1)
+        self._resultTabLayout.addWidget(table)
+    
+    def displayMangerWorkload(self)->QTableView:
+        """
+        Get worker in each activities
+        Not COmpleted yet
+        """
+        table = QTableView()
+        table.setModel(TableModel(self.query("fuck")))
+        if self._resultTabLayout.count() == 2:
+            self._resultTabLayout.takeAt(1)
+        self._resultTabLayout.addWidget(table)
+        
+    def displayOutSource(self)->QTableView:
+        """
+        Get worker in each activities
+        Not COmpleted yet
+        """
+        table = QTableView()
+        table.setModel(TableModel(self.query("fuck")))
+        if self._resultTabLayout.count() == 2:
+            self._resultTabLayout.takeAt(1)
+        self._resultTabLayout.addWidget(table)
+  
 #==========================Customer Classes===========================================
 class TableModel(QAbstractTableModel):
     """
@@ -168,15 +260,17 @@ if __name__ == '__main__':
     }
     QWidget#SubTab{
         border-radius: 10px;
-        background-color: #D3D3D3;
+        background-color: #EEEEEE;
         padding: 10px;
         margin-top: 10px;
     }
-    QComboBox#ActivityComboBox{
-
+    QWidget#SubTab2{
+        border-radius: 10px;
+        background-color: #EEEEEE;
+        padding-top: 20px;
     }
     QTableView {
-        background-color: #EEEEEE;
+        background-color: #EFEFEF;
     }
     QTableView::item {
         background-color: transparent;
@@ -184,11 +278,29 @@ if __name__ == '__main__':
     QHeaderView::section {
         background-color: transparent;
         padding: 5px;
-        border: 1px solid #D3D3D3;
+        border: 1px solid #EEEEEE;
         border-right: none;
     }
     QHeaderView::section:selected {
-        background-color: #D3D3D3;
+        background-color: #EEEEEE;
+    }
+    QTableCornerButton::section { 
+        background: transparent;
+    }
+    QPushButton{
+        border-radius: 5px;
+        background-color: #EEEEEE;
+        border: 2px solid #BBBBBB;
+        padding: 10px;
+    }         
+    QPushButton::hover{
+        background-color: #DDDDDD;
+        color: #555555;
+    }
+    QPushButton::pressed{
+        border: 2px solid #999999;
+        background-color: #DDDDDD;
+        color: #555555;
     }
     """)
 
