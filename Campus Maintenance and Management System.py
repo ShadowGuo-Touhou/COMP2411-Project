@@ -15,6 +15,7 @@ class SystemWindow():
         self.__initTab()
         self.__initTabOne()
         self.__initTabTwo()
+        self.__initTabThree()
         self.mainWindow.show()
 
     def __initWindow(self):
@@ -142,6 +143,40 @@ class SystemWindow():
         
         reportTabLayout.addStretch()
 
+    def __initTabThree(self):
+        # create tab
+        queryTab = QWidget()
+        self._queryTabLayout = QHBoxLayout()
+        queryTab.setLayout(self._queryTabLayout)
+        #add to tab
+        self._displayTab.addTab(queryTab, "Data Management")
+
+        # create query section
+        queryTab = QWidget()
+        queryTabLayout2 = QVBoxLayout()
+        queryTab.setLayout(queryTabLayout2)
+        # titles
+        title = QLabel("Run SQL Query")
+        title.setObjectName("Title")
+        title.setMargin(5)
+        queryTabLayout2.addWidget(title)
+        title = QLabel("SQL Command")
+        title.setObjectName("SubTitle")
+        queryTabLayout2.addWidget(title)
+        # create Textarea
+        self._queryArea = QTextEdit()
+        self._queryArea.setEnabled(True)
+        self._queryArea.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
+        queryTabLayout2.addWidget(self._queryArea)
+        # create button
+        button = QPushButton("Run Query")
+        queryTabLayout2.addWidget(button)
+        button.setMaximumWidth(100)
+        button.clicked.connect(self.runQuery)
+        # add to tab
+        self._queryTabLayout.addWidget(queryTab)
+
+        # create query result
 
 #===========================Functional methods===================================================
     def getBuilding(self)->list:
@@ -208,6 +243,28 @@ class SystemWindow():
         if self._resultTabLayout.count() == 2:
             self._resultTabLayout.takeAt(1)
         self._resultTabLayout.addWidget(table)
+
+    def runQuery(self):
+        """
+        Execute the query entered by user.
+        Depending on query's output, it can be a table or something else.
+        """
+        query = self._queryArea.toPlainText()
+        result = self.query(query)
+
+        if isinstance(result, list):
+            table = QTableView()
+            table.setModel(TableModel(result))
+            if self._queryTabLayout.count() == 2:
+                self._queryTabLayout.takeAt(1)
+            w = QWidget()
+            wl = QVBoxLayout()
+            w.setLayout(wl)
+            t = QLabel("Result")
+            t.setObjectName("Title")
+            wl.addWidget(t)
+            wl.addWidget(table)
+            self._queryTabLayout.addWidget(w)
   
 #==========================Customer Classes===========================================
 class TableModel(QAbstractTableModel):
