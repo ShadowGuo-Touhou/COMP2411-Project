@@ -367,7 +367,6 @@ class SystemWindow():
             self.activityTable.deleteLater()
             
             self.activityTable = self.getActivities()
-            layout.addWidget(self.activityTable)
 
     def displayWorkerDistribution(self):
         """Display worker distribution report"""
@@ -545,21 +544,9 @@ class SystemWindow():
             
             if results:
                 table = QTableView()
-                table.setModel(TableModel(results))
-                self.resultsLayout.addWidget(table)
-            else:
-                label = QLabel("No activities found for the selected criteria")
-                self.resultsLayout.addWidget(label)
-
-
-        
-        if location:
-            chemicals = self.db.getHarmfulChemicals()
-            results = self.db.queryForActivity(location, start_date, end_date, chemicals)
-            
-            if results:
-                table = QTableView()
-                table.setModel(TableModel(results))
+                model = TableModel(results)
+                model.setHeaderLabel(["AID", "Location", "Start Date", "End Date"])
+                table.setModel(model)
                 self.resultsLayout.addWidget(table)
             else:
                 label = QLabel("No activities found for the selected criteria")
