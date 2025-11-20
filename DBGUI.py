@@ -15,11 +15,11 @@ class SystemWindow():
         Initialize the main window
         """
         # Initialize database
-        self.db = SQLProcessor("P:\\PolyU\\2025 Sem 1\\COMP 2411\\project\\COMP2411-Project\\data.db")
+        self.db = SQLProcessor("data.db")
         
         self.__initWindow()
         self.__initTab()
-        self.__initTabOne()  # Activity list
+        # Tab one is useless, so I delete it 
         self.__initTabTwo()  # Admin Report
         self.__initTabThree()  # Data Management
         self.__initTabFour()   # Chemical Management
@@ -42,53 +42,6 @@ class SystemWindow():
         self._displayTab.setTabPosition(QTabWidget.TabPosition.North)
         self._displayTab.setMovable(True)
         self.mainWindow.setCentralWidget(self._displayTab)
-
-    def __initTabOne(self):
-        """
-        This tab is for manage and check activities
-        """
-        activityTab = QWidget()
-        activityTabLayout = QVBoxLayout()
-        activityTab.setLayout(activityTabLayout)
-        
-        # Title
-        title = QLabel("Activity list")
-        title.setObjectName("Title")
-        activityTabLayout.addWidget(title)
-        
-        subtitle = QLabel("Check for maintenance activities in a specific location")
-        subtitle.setObjectName("SecondaryText")
-        activityTabLayout.addWidget(subtitle)
-
-        # Building selection
-        buildingWidget = QWidget()
-        buildingWidget.setObjectName("SubTab")
-        buildingLayout = QVBoxLayout()
-        buildingWidget.setLayout(buildingLayout)
-        
-        buildingLabel = QLabel("Building/Location") 
-        buildingLabel.setObjectName("SubTitle")
-        buildingLayout.addWidget(buildingLabel)
-        
-        self.buildingSelection = QComboBox()
-        self.buildingSelection.setObjectName("ActivityComboBox")
-        buildingLayout.addWidget(self.buildingSelection)
-        
-        # Add buildings to combo box
-        self.refreshBuildings()
-        self.buildingSelection.currentTextChanged.connect(self.__buildingSelected)
-        
-        # Results section
-        resultLabel = QLabel("Result")
-        resultLabel.setObjectName("Title")
-        buildingLayout.addWidget(resultLabel)
-        
-        self.activityTable = self.getActivities()
-        buildingLayout.addWidget(self.activityTable)
-
-        activityTabLayout.addWidget(buildingWidget)
-        activityTabLayout.addStretch()
-        # self._displayTab.addTab(activityTab, "Activity list")
 
     def __initTabTwo(self):
         reportTab = QWidget()
@@ -352,13 +305,6 @@ class SystemWindow():
         
         self._displayTab.addTab(queryTab, "Activity Query")
 
-    def refreshBuildings(self):
-        """Refresh building list from database"""
-        self.buildingSelection.clear()
-        buildings = self.db.getBuildings()
-        for building in buildings:
-            self.buildingSelection.addItem(building[0])
-
     def refreshQueryLocations(self):
         """Refresh location list for query tab"""
         self.queryLocationCombo.clear()
@@ -372,24 +318,6 @@ class SystemWindow():
         chemicals = self.db.getHarmfulChemicals()
         for chemical in chemicals:
             self.chemicalList.addItem(chemical)
-
-    def getActivities(self):
-        """
-        Get all activities from database
-        """
-        table = QTableView()
-        # Get activities for the first building by default
-        if self.buildingSelection.count() > 0:
-            building = self.buildingSelection.currentText()
-            data = self.db.select("Activity", "*", f"AID IN (SELECT AID FROM HoldIn WHERE LocationName='{building}')")
-        else:
-            data = self.db.select("Activity")
-        
-        model = TableModel(data)
-        # model.setHeaderData()
-        table.setModel(model)
-        table.setShowGrid(False)
-        return table
 
     def query(self, query_text):
         """
@@ -513,13 +441,9 @@ class SystemWindow():
                 QMessageBox.information(self.mainWindow, "Success", "SQL file executed successfully!")
                 
                 # Refresh data in various tabs to reflect changes
-                self.refreshBuildings()
                 self.refreshQueryLocations()
                 self.refreshChemicalList()
                 
-                # Refresh activity table if it exists
-                if hasattr(self, 'activityTable') and self.buildingSelection.count() > 0:
-                    self.__buildingSelected(self.buildingSelection.currentText())
                     
             else:
                 QMessageBox.critical(self.mainWindow, "Error", "Failed to execute SQL file.")

@@ -51,12 +51,19 @@ class SQLProcessor:
             print("Please give a sql file!")
             return False
         try:
-            self.execute(".read {filePath}")
+            with open(filePath, 'r', encoding='utf-8') as f:
+                sql_script = f.read()
+            
+            statements = sql_script.split(';')
+            for statement in statements:
+                statement = statement.strip()
+                if statement and statement!="COMMIT":
+                    self.execute(statement)
             return True
         except Exception as e:
             print(f"Error reading file: {e}")
             return False
-
+        
     def insert(self, table, data_dict):
         """Insert data into table"""
         if table not in self.columns:
