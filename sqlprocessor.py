@@ -96,7 +96,26 @@ class SQLProcessor:
         command = f"SELECT {attributes} FROM {table} WHERE {condition}"
         return self.fetch_all(command)
 
-    def queryForActivity(self, location, startDate, endDate, chemicals=None):
+    def queryForActivity(self,location,chemicals=None):
+        if chemicals is None:
+            chemicals = self.harmfulChemicals
+        query = """
+        SELECT A.AID, A.Name, A.startDate, A.endDate, 
+               (SELECT COUNT(*) 
+                FROM TaskChemicals TC 
+                WHERE TC.AID = A.AID 
+                  AND TC.Chemicals IN ({})
+               ) AS Harmful_chemicals_count
+        FROM Activity A
+        JOIN HoldIn H ON A.AID = H.AID
+        WHERE H.LocationName = ?
+        GROUP BY A.AID, A.Name, A.startDate, A.endDate
+        """.format(','.join(['?' for _ in chemicals]))
+        
+        params = chemicals + [location]
+        return self.fetch_all(query, params)
+
+    def queryForActivityWithDate(self, location, startDate, endDate, chemicals=None):
         """Query activities based on location and date range"""
         if chemicals is None:
             chemicals = self.harmfulChemicals
@@ -137,8 +156,8 @@ class SQLProcessor:
             return True
         return False
 
-    def getBuildings(self):
-        """Get all buildings/locations"""
+    def getLocations(self):
+        """Get all locations"""
         return self.fetch_all("SELECT Name FROM Location")
 
     def close(self):

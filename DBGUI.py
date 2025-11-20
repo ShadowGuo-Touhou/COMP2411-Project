@@ -20,7 +20,6 @@ class SystemWindow():
         self.__initWindow()
         self.__initTab()
         # Tab one is useless, so I delete it
-        #self.__initTabOne()
         self.__initTabTwo()  # Admin Report
         self.__initTabThree()  # Data Management
         self.__initTabFour()   # Chemical Management
@@ -262,6 +261,16 @@ class SystemWindow():
         locationLayout.addWidget(self.queryLocationCombo)
         formLayout.addLayout(locationLayout)
         
+        # Time range selection
+        timeGroup = QGroupBox("Time Range")
+        timeLayout = QVBoxLayout()
+        timeGroup.setLayout(timeLayout)
+        
+        # Any time checkbox
+        self.anyTimeCheckbox = QCheckBox("Any Time")
+        self.anyTimeCheckbox.stateChanged.connect(self.toggleDateRange)
+        timeLayout.addWidget(self.anyTimeCheckbox)
+        
         # Date range
         dateLayout = QHBoxLayout()
         
@@ -283,7 +292,8 @@ class SystemWindow():
         endDateLayout.addWidget(self.endDateEdit)
         dateLayout.addLayout(endDateLayout)
         
-        formLayout.addLayout(dateLayout)
+        timeLayout.addLayout(dateLayout)
+        formLayout.addWidget(timeGroup)
         
         # Query button
         queryBtn = QPushButton("Query Activities")
@@ -307,19 +317,29 @@ class SystemWindow():
         
         self._displayTab.addTab(queryTab, "Activity Query")
 
-    def refreshBuildings(self):
-        """Refresh building list from database"""
-        self.buildingSelection.clear()
-        buildings = self.db.getBuildings()
-        for building in buildings:
-            self.buildingSelection.addItem(building[0])
+    def toggleDateRange(self, state):
+        """Toggle date range fields based on Any Time checkbox"""
+        if state == Qt.CheckState.Checked.value:
+            # Any Time selected - disable date fields
+            self.startDateEdit.setEnabled(False)
+            self.endDateEdit.setEnabled(False)
+            # Apply visual styling to show they are disabled
+            self.startDateEdit.setStyleSheet("background-color: #F0F0F0; color: #A0A0A0;")
+            self.endDateEdit.setStyleSheet("background-color: #F0F0F0; color: #A0A0A0;")
+        else:
+            # Specific time range - enable date fields
+            self.startDateEdit.setEnabled(True)
+            self.endDateEdit.setEnabled(True)
+            # Reset styling
+            self.startDateEdit.setStyleSheet("")
+            self.endDateEdit.setStyleSheet("")
 
     def refreshQueryLocations(self):
         """Refresh location list for query tab"""
         self.queryLocationCombo.clear()
-        buildings = self.db.getBuildings()
-        for building in buildings:
-            self.queryLocationCombo.addItem(building[0])
+        locations = self.db.getLocations()
+        for location in locations:
+            self.queryLocationCombo.addItem(location[0])
 
     def refreshChemicalList(self):
         """Refresh chemical list"""
@@ -327,24 +347,6 @@ class SystemWindow():
         chemicals = self.db.getHarmfulChemicals()
         for chemical in chemicals:
             self.chemicalList.addItem(chemical)
-
-    def getActivities(self):
-        """
-        Get all activities from database
-        """
-        table = QTableView()
-        # Get activities for the first building by default
-        if self.buildingSelection.count() > 0:
-            building = self.buildingSelection.currentText()
-            data = self.db.select("Activity", "*", f"AID IN (SELECT AID FROM HoldIn WHERE LocationName='{building}')")
-        else:
-            data = self.db.select("Activity")
-        
-        model = TableModel(data)
-        # model.setHeaderData()
-        table.setModel(model)
-        table.setShowGrid(False)
-        return table
 
     def query(self, query_text):
         """
@@ -357,16 +359,6 @@ class SystemWindow():
             return []
 
     # ==========================Connect methods============================================
-    def __buildingSelected(self, s):
-        """When building is selected, refresh activities"""
-        if hasattr(self, 'activityTable'):
-            # Remove old table and create new one
-            parent = self.activityTable.parent()
-            layout = parent.layout()
-            layout.removeWidget(self.activityTable)
-            self.activityTable.deleteLater()
-            
-            self.activityTable = self.getActivities()
 
     def displayWorkerDistribution(self):
         """Display worker distribution report"""
@@ -467,13 +459,8 @@ class SystemWindow():
                 QMessageBox.information(self.mainWindow, "Success", "SQL file executed successfully!")
                 
                 # Refresh data in various tabs to reflect changes
-                self.refreshBuildings()
                 self.refreshQueryLocations()
                 self.refreshChemicalList()
-                
-                # Refresh activity table if it exists
-                if hasattr(self, 'activityTable') and self.buildingSelection.count() > 0:
-                    self.__buildingSelected(self.buildingSelection.currentText())
                     
             else:
                 QMessageBox.critical(self.mainWindow, "Error", "Failed to execute SQL file.")
@@ -529,23 +516,28 @@ class SystemWindow():
     def queryActivities(self):
         """Query activities based on location and date range"""
         location = self.queryLocationCombo.currentText()
-        start_date = self.startDateEdit.date().toString("yyyy-MM-dd")
-        end_date = self.endDateEdit.date().toString("yyyy-MM-dd")
-        
         # Clear previous results
         while self.resultsLayout.count() > 1:
             item = self.resultsLayout.takeAt(1)
             if item.widget():
                 item.widget().deleteLater()
+
+        start_date = self.startDateEdit.date().toString("yyyy-MM-dd")
+        end_date = self.endDateEdit.date().toString("yyyy-MM-dd")
+        
+
         
         if location:
             chemicals = self.db.getHarmfulChemicals()
-            results = self.db.queryForActivity(location, start_date, end_date, chemicals)
+            if(self.anyTimeCheckbox.isChecked()):
+                results=self.db.queryForActivity(location,chemicals)
+            else:
+                results = self.db.queryForActivityWithDate(location, start_date, end_date, chemicals)
             
             if results:
                 table = QTableView()
                 model = TableModel(results)
-                model.setHeaderLabel(["AID", "Location", "Start Date", "End Date"])
+                model.setHeaderLabel(["AID", "Name", "Start Date", "End Date","Harmful\nChemicals"])
                 table.setModel(model)
                 self.resultsLayout.addWidget(table)
             else:
