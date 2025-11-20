@@ -24,3 +24,8 @@
       2. Updated GUI, completed the first and second tab.
       3. Updated GUI, completed the manage tab.
 
+2025/11/20 Jimmy
+      1. Sample code to create a db, use it or dump it.
+      2. the db name is setted through the config.py
+      3. vibe coded a test data generator, run 'python database/main.py' will create db with data innit
+      4. You are now required to have faker and pyqt6 to run the program

@@ -4,6 +4,7 @@ from PyQt6.QtGui import *
 from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
 
+from database.sql_things import getBuilding_fromDB
 
 class SystemWindow():
     
@@ -79,6 +80,7 @@ class SystemWindow():
         # add buildings to the combo box
         for building in self.getBuilding():
             buildingSelection.addItem(building)
+            # print(building)
         buildingSelection.currentTextChanged.connect(self.__buildingSelected)
         title = QLabel("Result")
         title.setObjectName("Title")
@@ -185,6 +187,13 @@ class SystemWindow():
         Not completed yet, need the colation from database
         """
         buildings = ["All", "one", "two", "tree"]
+        # try:
+        #     buildings = getBuilding_fromDB(); #testing
+        #     # print("win")
+        #     # for i in buildings:
+        #     #     print(i)
+        # except:
+        #     print("You Lose")
         return buildings
 
     def getActivities(self)->QTableView:
