@@ -62,6 +62,10 @@ CREATE TABLE Task (
 );
 -- Note that Task Name has been shortend into Name
 -- I have set ON DELETE CASCADE on Task
+--
+-- Update on 20 Nov: Chemicals can have multi-values. 
+-- To avoid offending 1NF, please split the entry with multiple chemicals so that each entry has only one chemical.
+-- Please see P.30 of Lecture 6 slides.
 
 CREATE TABLE Assigned (
 	WID INTEGER NOT NULL,
@@ -73,6 +77,38 @@ CREATE TABLE Assigned (
 	ON UPDATE CASCADE
 	DEFERRABLE INITIALLY DEFERRED,
 	FOREIGN KEY (AID, TaskName) REFERENCES Task(AID, Name)
+	ON DELETE CASCADE
+	ON UPDATE CASCADE
+	DEFERRABLE INITIALLY DEFERRED
+);
+
+-- Updated 20 Nov:
+
+CREATE TABLE HoldIn (
+	AID INTEGER NOT NULL,
+	LocationName TEXT NOT NULL,
+	PRIMARY KEY (AID, LocationName),
+	FOREIGN KEY (AID) REFERENCES Activity(AID)
+	ON DELETE CASCADE
+	ON UPDATE CASCADE
+	DEFERRABLE INITIALLY DEFERRED,
+	FOREIGN KEY (LocationName) REFERENCES Location(Name)
+	ON DELETE CASCADE
+	ON UPDATE CASCADE
+	DEFERRABLE INITIALLY DEFERRED
+);
+
+CREATE TABLE WorkOn (
+	AID INTEGER NOT NULL,
+	CompanyID INTEGER NOT NULL,
+	ContractedPayment TEXT NOT NULL,
+	ContractedTime TEXT NOT NULL,
+	PRIMARY KEY (AID, CompanyID),
+	FOREIGN KEY (AID) REFERENCES Activity(AID)
+	ON DELETE CASCADE
+	ON UPDATE CASCADE
+	DEFERRABLE INITIALLY DEFERRED,
+	FOREIGN KEY (CompanyID) REFERENCES Company(CompanyID)
 	ON DELETE CASCADE
 	ON UPDATE CASCADE
 	DEFERRABLE INITIALLY DEFERRED
