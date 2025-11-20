@@ -591,6 +591,20 @@ class SystemWindow():
                 self.resultsLayout.addWidget(label)
 
 
+        
+        if location:
+            chemicals = self.db.getHarmfulChemicals()
+            results = self.db.queryForActivity(location, start_date, end_date, chemicals)
+            
+            if results:
+                table = QTableView()
+                table.setModel(TableModel(results))
+                self.resultsLayout.addWidget(table)
+            else:
+                label = QLabel("No activities found for the selected criteria")
+                self.resultsLayout.addWidget(label)
+
+
 class DataOperationDialog(QDialog):
     """Dialog for insert, update, and delete operations"""
     
@@ -600,13 +614,28 @@ class DataOperationDialog(QDialog):
         self.operation = operation
         self.setWindowTitle(f"{operation.title()} Data")
         self.setModal(True)
-        self.resize(600, 400)
+        
+        # 设置固定大小
+        self.setFixedSize(900, 700)
+        
+        self.condition_blocks = []  # 存储条件块
+        self.column_types = {}  # 存储列数据类型
         
         self.initUI()
         
     def initUI(self):
-        layout = QVBoxLayout()
-        self.setLayout(layout)
+        # 创建主布局和滚动区域
+        main_layout = QVBoxLayout(self)
+        
+        # 创建滚动区域
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        
+        # 创建内容部件
+        content_widget = QWidget()
+        self.content_layout = QVBoxLayout(content_widget)
         
         # Table selection
         tableLayout = QHBoxLayout()
@@ -617,19 +646,15 @@ class DataOperationDialog(QDialog):
         self.tableCombo.currentTextChanged.connect(self.tableChanged)
         tableLayout.addWidget(self.tableCombo)
         
-        layout.addLayout(tableLayout)
+        self.content_layout.addLayout(tableLayout)
         
-        # Data table
-        self.dataTable = QTableWidget()
-        layout.addWidget(self.dataTable)
-        
-        # Operation specific widgets
-        if self.operation == "insert":
-            self.setupInsertUI(layout)
+        # 根据操作类型显示不同界面
+        if self.operation == "delete":
+            self.setupDeleteUI(self.content_layout)
         elif self.operation == "update":
-            self.setupUpdateUI(layout)
-        elif self.operation == "delete":
-            self.setupDeleteUI(layout)
+            self.setupUpdateUI(self.content_layout)
+        else:  # insert
+            self.setupInsertUI(self.content_layout)
         
         # Buttons
         buttonLayout = QHBoxLayout()
@@ -642,7 +667,13 @@ class DataOperationDialog(QDialog):
         cancelBtn.clicked.connect(self.reject)
         buttonLayout.addWidget(cancelBtn)
         
-        layout.addLayout(buttonLayout)
+        self.content_layout.addLayout(buttonLayout)
+        
+        # 将内容部件设置为滚动区域的部件
+        scroll_area.setWidget(content_widget)
+        
+        # 将滚动区域添加到主布局
+        main_layout.addWidget(scroll_area)
         
         # Initialize with first table
         if self.tableCombo.count() > 0:
@@ -650,6 +681,16 @@ class DataOperationDialog(QDialog):
     
     def setupInsertUI(self, layout):
         """Setup UI for insert operation"""
+        # Data table with scroll area
+        table_scroll = QScrollArea()
+        table_scroll.setWidgetResizable(True)
+        table_scroll.setMinimumHeight(300)
+        
+        self.dataTable = QTableWidget()
+        table_scroll.setWidget(self.dataTable)
+        
+        layout.addWidget(table_scroll)
+        
         addRowBtn = QPushButton("+ Add Row")
         addRowBtn.clicked.connect(self.addRow)
         layout.addWidget(addRowBtn)
@@ -657,97 +698,396 @@ class DataOperationDialog(QDialog):
         # Start with one empty row
         self.addRow()
     
-    def setupUpdateUI(self, layout):
-        """Setup UI for update operation"""
-        conditionLayout = QHBoxLayout()
-        conditionLayout.addWidget(QLabel("WHERE Condition:"))
-        
-        self.conditionEdit = QLineEdit()
-        self.conditionEdit.setPlaceholderText("e.g., ID=1")
-        conditionLayout.addWidget(self.conditionEdit)
-        
-        layout.addLayout(conditionLayout)
-    
     def setupDeleteUI(self, layout):
-        """Setup UI for delete operation"""
-        conditionLayout = QHBoxLayout()
-        conditionLayout.addWidget(QLabel("WHERE Condition:"))
+        """Setup UI for delete operation - 使用条件块"""
+        # 条件构建器
+        conditionWidget = QWidget()
+        conditionLayout = QVBoxLayout()
+        conditionWidget.setLayout(conditionLayout)
         
-        self.conditionEdit = QLineEdit()
-        self.conditionEdit.setPlaceholderText("e.g., ID=1 (leave empty to delete all)")
-        conditionLayout.addWidget(self.conditionEdit)
+        conditionLabel = QLabel("WHERE Conditions (Blocks are ANDed, conditions within block are ORed):")
+        conditionLayout.addWidget(conditionLabel)
         
-        layout.addLayout(conditionLayout)
+        # 条件块容器 - 使用滚动区域
+        condition_scroll = QScrollArea()
+        condition_scroll.setWidgetResizable(True)
+        condition_scroll.setMinimumHeight(300)
+        
+        condition_blocks_widget = QWidget()
+        self.conditionBlocksContainer = QVBoxLayout(condition_blocks_widget)
+        condition_scroll.setWidget(condition_blocks_widget)
+        
+        conditionLayout.addWidget(condition_scroll)
+        
+        # 添加条件块按钮
+        addBlockBtn = QPushButton("+ Add Condition Block")
+        addBlockBtn.clicked.connect(self.addConditionBlock)
+        conditionLayout.addWidget(addBlockBtn)
+        
+        layout.addWidget(conditionWidget)
+        
+        # 初始添加一个条件块
+        self.addConditionBlock()
+    
+    def setupUpdateUI(self, layout):
+        """Setup UI for update operation - 使用条件块和更新表格"""
+        # 使用分割器来分隔条件和更新部分，允许用户调整大小
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        
+        # 左侧条件部分
+        conditionWidget = QWidget()
+        conditionLayout = QVBoxLayout(conditionWidget)
+        
+        conditionLabel = QLabel("WHERE Conditions (Blocks are ANDed, conditions within block are ORed):")
+        conditionLayout.addWidget(conditionLabel)
+        
+        # 条件块容器 - 使用滚动区域
+        condition_scroll = QScrollArea()
+        condition_scroll.setWidgetResizable(True)
+        
+        condition_blocks_widget = QWidget()
+        self.conditionBlocksContainer = QVBoxLayout(condition_blocks_widget)
+        condition_scroll.setWidget(condition_blocks_widget)
+        
+        conditionLayout.addWidget(condition_scroll)
+        
+        # 添加条件块按钮
+        addBlockBtn = QPushButton("+ Add Condition Block")
+        addBlockBtn.clicked.connect(self.addConditionBlock)
+        conditionLayout.addWidget(addBlockBtn)
+        
+        # 右侧更新值部分
+        updateWidget = QWidget()
+        updateLayout = QVBoxLayout(updateWidget)
+        
+        updateLabel = QLabel("Update Values (unlock to change):")
+        updateLayout.addWidget(updateLabel)
+        
+        # 更新值表格 - 使用滚动区域
+        table_scroll = QScrollArea()
+        table_scroll.setWidgetResizable(True)
+        
+        self.updateTable = QTableWidget()
+        self.updateTable.setColumnCount(3)  # 列名，值，锁定状态
+        self.updateTable.setHorizontalHeaderLabels(["Column", "New Value", "Locked"])
+        table_scroll.setWidget(self.updateTable)
+        
+        updateLayout.addWidget(table_scroll)
+        
+        # 将左右部件添加到分割器
+        splitter.addWidget(conditionWidget)
+        splitter.addWidget(updateWidget)
+        
+        # 设置分割器初始比例
+        splitter.setSizes([400, 400])
+        
+        layout.addWidget(splitter)
+        
+        # 初始添加一个条件块
+        self.addConditionBlock()
+    
+    def addConditionBlock(self):
+        """添加一个新的条件块"""
+        block_widget = QWidget()
+        block_widget.setStyleSheet("QWidget { border: 1px solid #CCCCCC; border-radius: 5px; padding: 5px; margin: 2px; }")
+        block_layout = QVBoxLayout(block_widget)
+        
+        # 条件块标题
+        block_header = QHBoxLayout()
+        block_label = QLabel(f"Condition Block {len(self.condition_blocks) + 1}")
+        block_label.setStyleSheet("font-weight: bold;")
+        block_header.addWidget(block_label)
+        
+        remove_block_btn = QPushButton("Remove Block")
+        remove_block_btn.setStyleSheet("QPushButton { background-color: #FFCCCC; }")
+        remove_block_btn.clicked.connect(lambda: self.removeConditionBlock(block_widget))
+        block_header.addWidget(remove_block_btn)
+        block_header.addStretch()
+        
+        block_layout.addLayout(block_header)
+        
+        # 条件容器
+        conditions_layout = QVBoxLayout()
+        block_layout.addLayout(conditions_layout)
+        
+        # 添加条件按钮
+        add_condition_btn = QPushButton("+ Add Condition")
+        add_condition_btn.clicked.connect(lambda: self.addCondition(conditions_layout))
+        block_layout.addWidget(add_condition_btn)
+        
+        # 存储条件块信息
+        block_info = {
+            'widget': block_widget,
+            'conditions_layout': conditions_layout,
+            'conditions': []
+        }
+        self.condition_blocks.append(block_info)
+        
+        # 添加到容器 - 在块之间添加AND标志
+        if len(self.condition_blocks) > 1:
+            and_label = QLabel("AND")
+            and_label.setStyleSheet("QLabel { font-weight: bold; color: #666666; background-color: #F0F0F0; padding: 5px; border-radius: 3px; }")
+            and_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.conditionBlocksContainer.addWidget(and_label)
+        
+        self.conditionBlocksContainer.addWidget(block_widget)
+        
+        # 初始添加一个条件
+        self.addCondition(conditions_layout)
+    
+    def removeConditionBlock(self, block_widget):
+        """移除条件块"""
+        # 找到要删除的块索引
+        remove_index = -1
+        for i, block_info in enumerate(self.condition_blocks):
+            if block_info['widget'] == block_widget:
+                remove_index = i
+                break
+        
+        if remove_index == -1:
+            return
+        
+        # 移除条件块及其前面的AND标签（如果有）
+        if remove_index > 0:
+            # 移除前面的AND标签
+            and_widget = self.conditionBlocksContainer.itemAt(remove_index * 2 - 1).widget()
+            if and_widget:
+                and_widget.deleteLater()
+        
+        # 移除条件块
+        self.condition_blocks.pop(remove_index)
+        block_widget.deleteLater()
+        
+        # 重新编号条件块和AND标签
+        self.renumberConditionBlocks()
+    
+    def renumberConditionBlocks(self):
+        """重新编号条件块和AND标签"""
+        # 清除所有现有的AND标签
+        for i in reversed(range(self.conditionBlocksContainer.count())):
+            item = self.conditionBlocksContainer.itemAt(i)
+            if item and item.widget():
+                widget = item.widget()
+                if isinstance(widget, QLabel) and widget.text() == "AND":
+                    self.conditionBlocksContainer.removeWidget(widget)
+                    widget.deleteLater()
+        
+        # 重新添加条件块和AND标签
+        for i, block_info in enumerate(self.condition_blocks):
+            if i > 0:
+                and_label = QLabel("AND")
+                and_label.setStyleSheet("QLabel { font-weight: bold; color: #666666; background-color: #F0F0F0; padding: 5px; border-radius: 3px; }")
+                and_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.conditionBlocksContainer.addWidget(and_label)
+            
+            # 更新块标题
+            block_label = block_info['widget'].layout().itemAt(0).itemAt(0).widget()
+            block_label.setText(f"Condition Block {i + 1}")
+            
+            # 重新添加条件块
+            self.conditionBlocksContainer.addWidget(block_info['widget'])
+    
+    def addCondition(self, conditions_layout):
+        """在条件块中添加一个新条件"""
+        condition_widget = QWidget()
+        condition_widget.setStyleSheet("QWidget { background-color: #F5F5F5; border-radius: 3px; padding: 3px; }")
+        condition_layout = QHBoxLayout(condition_widget)
+        
+        # 如果是第一个条件，添加OR标签占位符保持对齐
+        if conditions_layout.count() > 0:
+            or_label = QLabel("OR")
+            or_label.setStyleSheet("QLabel { font-weight: bold; color: #666666; min-width: 30px; }")
+            or_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            condition_layout.addWidget(or_label)
+        else:
+            # 添加空标签保持对齐
+            empty_label = QLabel("")
+            empty_label.setMinimumWidth(30)
+            condition_layout.addWidget(empty_label)
+        
+        # 列选择
+        column_combo = QComboBox()
+        if self.tableCombo.currentText():
+            columns = self.db.getColumns(self.tableCombo.currentText())
+            column_combo.addItems(columns)
+        column_combo.setMinimumWidth(120)
+        condition_layout.addWidget(column_combo)
+        
+        # 运算符选择
+        operator_combo = QComboBox()
+        operator_combo.addItems(["=", "!=", ">", ">=", "<", "<=", "LIKE", "IN"])
+        operator_combo.setMinimumWidth(80)
+        condition_layout.addWidget(operator_combo)
+        
+        # 值输入
+        value_edit = QLineEdit()
+        value_edit.setPlaceholderText("Value")
+        condition_layout.addWidget(value_edit)
+        
+        # 移除条件按钮
+        remove_btn = QPushButton("Remove")
+        remove_btn.setStyleSheet("QPushButton { background-color: #FFE6E6; }")
+        remove_btn.clicked.connect(lambda: self.removeCondition(condition_widget, conditions_layout))
+        condition_layout.addWidget(remove_btn)
+        
+        conditions_layout.addWidget(condition_widget)
+        
+        # 找到对应的条件块并存储条件
+        for block_info in self.condition_blocks:
+            if block_info['conditions_layout'] == conditions_layout:
+                condition_info = {
+                    'widget': condition_widget,
+                    'column_combo': column_combo,
+                    'operator_combo': operator_combo,
+                    'value_edit': value_edit
+                }
+                block_info['conditions'].append(condition_info)
+                break
+    
+    def removeCondition(self, condition_widget, conditions_layout):
+        """移除条件"""
+        for block_info in self.condition_blocks:
+            if block_info['conditions_layout'] == conditions_layout:
+                for i, condition_info in enumerate(block_info['conditions']):
+                    if condition_info['widget'] == condition_widget:
+                        block_info['conditions'].pop(i)
+                        condition_widget.deleteLater()
+                        break
+                
+                # 重新添加OR标签
+                self.readdOrLabels(conditions_layout)
+                break
+    
+    def readdOrLabels(self, conditions_layout):
+        """重新添加条件之间的OR标签"""
+        # 获取所有条件部件
+        condition_widgets = []
+        for i in range(conditions_layout.count()):
+            item = conditions_layout.itemAt(i)
+            if item and item.widget():
+                condition_widgets.append(item.widget())
+        
+        # 清除布局
+        for widget in condition_widgets:
+            conditions_layout.removeWidget(widget)
+        
+        # 重新添加条件，包括OR标签
+        for i, widget in enumerate(condition_widgets):
+            if i > 0:
+                or_label = QLabel("OR")
+                or_label.setStyleSheet("QLabel { font-weight: bold; color: #666666; min-width: 30px; }")
+                or_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                conditions_layout.addWidget(or_label)
+            
+            conditions_layout.addWidget(widget)
+    
+    def buildConditionString(self):
+        """构建条件字符串"""
+        if not self.condition_blocks:
+            return "1=1"  # 默认条件
+        
+        block_conditions = []
+        
+        for block_info in self.condition_blocks:
+            if not block_info['conditions']:
+                continue
+                
+            condition_parts = []
+            for condition_info in block_info['conditions']:
+                column = condition_info['column_combo'].currentText()
+                operator = condition_info['operator_combo'].currentText()
+                value = condition_info['value_edit'].text().strip()
+                
+                if not value:
+                    continue
+                
+                # 处理值，根据数据类型决定是否加引号
+                col_type = self.column_types.get(column, "TEXT")
+                if "TEXT" in col_type.upper():
+                    value = f"'{value.replace("'", "''")}'"  # 转义单引号
+                
+                condition_parts.append(f"{column} {operator} {value}")
+            
+            if condition_parts:
+                block_conditions.append(f"({' OR '.join(condition_parts)})")
+        
+        if not block_conditions:
+            return "1=1"
+        
+        return " AND ".join(block_conditions)
     
     def tableChanged(self, table_name):
-        """When table selection changes, update the data table"""
-        columns = self.db.getColumns(table_name)
-        self.dataTable.setColumnCount(len(columns))
-        self.dataTable.setHorizontalHeaderLabels(columns)
+        """当表选择改变时，更新界面"""
+        # 获取列数据类型
+        self.column_types = self.getColumnTypes(table_name)
+        columns = list(self.column_types.keys())
         
         if self.operation == "insert":
+            self.dataTable.setColumnCount(len(columns))
+            self.dataTable.setHorizontalHeaderLabels(columns)
             self.dataTable.setRowCount(1)
             for col in range(len(columns)):
                 self.dataTable.setItem(0, col, QTableWidgetItem(""))
+        
+        elif self.operation == "update":
+            # 更新条件块中的列选择
+            for block_info in self.condition_blocks:
+                for condition_info in block_info['conditions']:
+                    condition_info['column_combo'].clear()
+                    condition_info['column_combo'].addItems(columns)
+            
+            # 更新更新值表格
+            self.updateTable.setRowCount(len(columns))
+            for i, column in enumerate(columns):
+                # 列名
+                col_name_item = QTableWidgetItem(column)
+                col_name_item.setFlags(col_name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)  # 不可编辑
+                self.updateTable.setItem(i, 0, col_name_item)
+                
+                # 值（初始为空，锁定）
+                value_item = QTableWidgetItem("")
+                value_item.setFlags(value_item.flags() & ~Qt.ItemFlag.ItemIsEditable)  # 初始不可编辑
+                self.updateTable.setItem(i, 1, value_item)
+                
+                # 锁定状态复选框
+                lock_checkbox = QCheckBox()
+                lock_checkbox.setChecked(True)  # 初始锁定
+                lock_checkbox.stateChanged.connect(
+                    lambda state, row=i: self.toggleLockState(state, row)
+                )
+                checkbox_widget = QWidget()
+                checkbox_layout = QHBoxLayout(checkbox_widget)
+                checkbox_layout.addWidget(lock_checkbox)
+                checkbox_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                checkbox_layout.setContentsMargins(0, 0, 0, 0)
+                self.updateTable.setCellWidget(i, 2, checkbox_widget)
+        
+        elif self.operation == "delete":
+            # 更新条件块中的列选择
+            for block_info in self.condition_blocks:
+                for condition_info in block_info['conditions']:
+                    condition_info['column_combo'].clear()
+                    condition_info['column_combo'].addItems(columns)
+    
+    def toggleLockState(self, state, row):
+        """切换锁定状态"""
+        value_item = self.updateTable.item(row, 1)
+        if state == Qt.CheckState.Checked.value:
+            # 锁定 - 不可编辑
+            value_item.setFlags(value_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+            value_item.setBackground(QColor(240, 240, 240))  # 灰色背景表示锁定
+        else:
+            # 解锁 - 可编辑
+            value_item.setFlags(value_item.flags() | Qt.ItemFlag.ItemIsEditable)
+            value_item.setBackground(QColor(255, 255, 255))  # 白色背景表示可编辑
     
     def addRow(self):
-        """Add a new row for insert operation"""
+        """为insert操作添加新行"""
         row = self.dataTable.rowCount()
         self.dataTable.setRowCount(row + 1)
         for col in range(self.dataTable.columnCount()):
             self.dataTable.setItem(row, col, QTableWidgetItem(""))
     
-    def executeOperation(self):
-        """Execute the database operation"""
-        table = self.tableCombo.currentText()
-        
-        try:
-            if self.operation == "insert":
-                self.executeInsert(table)
-            elif self.operation == "update":
-                self.executeUpdate(table)
-            elif self.operation == "delete":
-                self.executeDelete(table)
-                
-            QMessageBox.information(self, "Success", f"{self.operation.title()} operation completed successfully!")
-            self.accept()
-            
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Operation failed: {str(e)}")
-    
-    def executeInsert(self, table):
-        """Execute insert operation"""
-        # 获取表的列信息（包括数据类型）
-        column_info = self.getColumnTypes(table)
-        
-        for row in range(self.dataTable.rowCount()):
-            data = {}
-            for col in range(self.dataTable.columnCount()):
-                header = self.dataTable.horizontalHeaderItem(col).text()
-                item = self.dataTable.item(row, col)
-                value = item.text().strip() if item else ""
-                
-                # 获取该列的数据类型
-                col_type = column_info.get(header, "TEXT")  # 默认为TEXT
-                
-                # 处理空值
-                if not value:
-                    data[header] = "NULL"
-                else:
-                    # 只有TEXT类型才添加引号
-                    if "TEXT" in col_type.upper():
-                        # 移除用户输入中可能包含的引号，然后加上引号
-                        value = value.replace('"', '').replace("'", "")
-                        data[header] = f"'{value}'"
-                    else:
-                        # 对于非TEXT类型（如INTEGER, REAL等），直接使用值
-                        data[header] = value
-            
-            if data:
-                success = self.db.insert(table, data)
-                if not success:
-                    raise Exception(f"Failed to insert row {row + 1}")
-
     def getColumnTypes(self, table_name):
         """获取表的列信息，包括数据类型"""
         # 查询sqlite_master表获取表定义
@@ -786,30 +1126,89 @@ class DataOperationDialog(QDialog):
         
         return column_types
     
-    def executeUpdate(self, table):
-        """Execute update operation"""
-        if self.dataTable.rowCount() == 0:
-            raise Exception("No data to update")
-            
-        changes = {}
-        for col in range(self.dataTable.columnCount()):
-            header = self.dataTable.horizontalHeaderItem(col).text()
-            item = self.dataTable.item(0, col)
-            value = item.text().strip() if item else ""
-            
-            if value:
-                value = value.replace('"', '').replace("'", "")
-                changes[header] = f"'{value}'"
+    def executeOperation(self):
+        """执行数据库操作"""
+        table = self.tableCombo.currentText()
         
-        condition = self.conditionEdit.text().strip() or "1=1"
+        try:
+            if self.operation == "insert":
+                self.executeInsert(table)
+            elif self.operation == "update":
+                self.executeUpdate(table)
+            elif self.operation == "delete":
+                self.executeDelete(table)
+                
+            QMessageBox.information(self, "Success", f"{self.operation.title()} operation completed successfully!")
+            self.accept()
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Operation failed: {str(e)}")
+    
+    def executeInsert(self, table):
+        """执行insert操作"""
+        for row in range(self.dataTable.rowCount()):
+            data = {}
+            for col in range(self.dataTable.columnCount()):
+                header = self.dataTable.horizontalHeaderItem(col).text()
+                item = self.dataTable.item(row, col)
+                value = item.text().strip() if item else ""
+                
+                # 处理空值
+                if not value:
+                    data[header] = "NULL"
+                else:
+                    # 只有TEXT类型才添加引号
+                    if "TEXT" in self.column_types.get(header, "TEXT").upper():
+                        # 移除用户输入中可能包含的引号，然后加上引号
+                        value = value.replace('"', '').replace("'", "")
+                        data[header] = f"'{value}'"
+                    else:
+                        # 对于非TEXT类型（如INTEGER, REAL等），直接使用值
+                        data[header] = value
+            
+            if data:
+                success = self.db.insert(table, data)
+                if not success:
+                    raise Exception(f"Failed to insert row {row + 1}")
+    
+    def executeUpdate(self, table):
+        """执行update操作"""
+        # 构建条件
+        condition = self.buildConditionString()
+        
+        # 构建更新数据
+        changes = {}
+        for row in range(self.updateTable.rowCount()):
+            column = self.updateTable.item(row, 0).text()
+            value_item = self.updateTable.item(row, 1)
+            lock_checkbox = self.updateTable.cellWidget(row, 2).findChild(QCheckBox)
+            
+            # 只处理解锁的列
+            if not lock_checkbox.isChecked() and value_item:
+                value = value_item.text().strip()
+                
+                if value:
+                    # 根据数据类型处理值
+                    col_type = self.column_types.get(column, "TEXT")
+                    if "TEXT" in col_type.upper():
+                        value = value.replace("'", "''")  # 转义单引号
+                        changes[column] = f"'{value}'"
+                    else:
+                        changes[column] = value
+                else:
+                    changes[column] = "NULL"
+        
+        if not changes:
+            raise Exception("No columns selected for update")
+        
         success = self.db.update(table, changes, condition)
         
         if not success:
             raise Exception("Update operation failed")
     
     def executeDelete(self, table):
-        """Execute delete operation"""
-        condition = self.conditionEdit.text().strip() or "1=1"
+        """执行delete操作"""
+        condition = self.buildConditionString()
         success = self.db.delete(table, condition)
         
         if not success:
