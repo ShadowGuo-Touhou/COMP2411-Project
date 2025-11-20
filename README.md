@@ -34,4 +34,5 @@
 2025/11/20 Ziru  
       **IMPORTANT**: Please be aware that the _format_ of date and time has been revised. (see above)  
       1. Date and Time format revised.  
-      2. Attribute "Chemicals" in table "Task" **violates 1NF**. I created another table **TaskChemicals**. (see database/configuration.sql)  
+      2. Attribute "Chemicals" in table "Task" **violates 1NF**. I created another table **TaskChemicals**. (see database/configuration.sql)   
+      3. Please **make sure that** only _a single executive officer_ is allowed in table _Manager_ in Python code.  
