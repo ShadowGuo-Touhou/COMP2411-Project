@@ -36,8 +36,8 @@ CREATE TABLE Location (
 CREATE TABLE Activity (
 	AID INTEGER PRIMARY KEY,
 	Name TEXT NOT NULL,
-	startDate TEXT,
-	endDate TEXT,
+	startDate TEXT NOT NULL,
+	endDate TEXT NOT NULL,
 	CHECK (startDate IS NULL OR endDate IS NULL OR endDate>=startDate)
 ) STRICT;
 -- Note that Date should be stored in ISO-8601 format so that it can be easily compared.
