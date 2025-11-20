@@ -14,7 +14,7 @@
         - For example, HKT 23:41:00, 12 November, 2025 should be represented as **2025-11-12T23:41:00**.  
         You can also store a date without a specific time. The format would be much simplier: **YYYY-MM-DD**.  
         - For example, 12 Nov 2025 should be represented as **2025-11-12**.  
-  3. I will not upload the database file because git can only handle text files and attempting to upload binary files like a database might mess up the whole repo.  
+  3. Binary files, like a .db one, should be listed in _.gitignore_. Otherwise may destroy the whole repo. 
         - It is recommended that we upload the db entries in text forms (or better, in SQL commands).  
         - You can set up your own db using the script (database/configuration.sql) with SQLite. (https://sqlite.org/download.html)  
         - To run the script, type "./sqlite3.exe campus.db < configuration.db" in your terminal. Make sure that configuration.db is in your current directory.
@@ -32,4 +32,6 @@
       5. btw I fixed the get building thing in the gui
 
 2025/11/20 Ziru  
-      **IMPORTANT**: Please be aware that the _format_ of date and time has been revised. (see above)
+      **IMPORTANT**: Please be aware that the _format_ of date and time has been revised. (see above)  
+      1. Date and Time format revised.
+      2. Attribute "Chemicals" in table "Task" **violates 1NF**. I created another table **TaskChemicals**. (see database/configuration.sql)
