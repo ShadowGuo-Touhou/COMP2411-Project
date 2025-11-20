@@ -3,7 +3,7 @@
     1. a function for executing a sql commad and return the result: execute(command: str) --> list;
     2. a function that returns the content of a table by name getTableContent(tableName: str) --> list;
 
-2025/11/12 Ziru (Updated 20 Nov)
+2025/11/12 Ziru (Updated 20 Nov)  
 
   I have uploaded the SQL script that is used to set up the database to database/configuration.sql 
   
@@ -19,12 +19,12 @@
         - You can set up your own db using the script (database/configuration.sql) with SQLite. (https://sqlite.org/download.html)  
         - To run the script, type "./sqlite3.exe campus.db < configuration.db" in your terminal. Make sure that configuration.db is in your current directory.
 
-2025/11/17 Ruiyang
+2025/11/17 Ruiyang  
       1. Update GUI, completed the first tab.  
       2. Updated GUI, completed the first and second tab.  
       3. Updated GUI, completed the manage tab.  
 
-2025/11/20 Jimmy
+2025/11/20 Jimmy  
       1. Sample code to create a db, use it or dump it.  
       2. the db name is setted through the config.py  
       3. vibe coded a test data generator, run 'python database/main.py' will create db with data innit  
