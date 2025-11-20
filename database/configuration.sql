@@ -68,7 +68,7 @@ CREATE TABLE Task (
 -- Please see P.30 of Lecture 6 slides.
 
 -- New relation:
-CREATE TABLE TaskChemical (
+CREATE TABLE TaskChemicals (
 	AID INTEGER NOT NULL,
 	TaskName TEXT NOT NULL,
 	Chemicals TEXT NOT NULL,
