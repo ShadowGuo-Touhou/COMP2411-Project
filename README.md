@@ -29,3 +29,4 @@
       2. the db name is setted through the config.py
       3. vibe coded a test data generator, run 'python database/main.py' will create db with data innit
       4. You are now required to have faker and pyqt6 to run the program
+      5. btw I fixed the get building thing in the gui

@@ -79,8 +79,8 @@ class SystemWindow():
         activityTableLayout.addWidget(buildingSelection)
         # add buildings to the combo box
         for building in self.getBuilding():
-            buildingSelection.addItem(building)
-            # print(building)
+            buildingName = building[0]
+            buildingSelection.addItem(buildingName)
         buildingSelection.currentTextChanged.connect(self.__buildingSelected)
         title = QLabel("Result")
         title.setObjectName("Title")
@@ -187,13 +187,13 @@ class SystemWindow():
         Not completed yet, need the colation from database
         """
         buildings = ["All", "one", "two", "tree"]
-        # try:
-        #     buildings = getBuilding_fromDB(); #testing
+        try:
+            buildings = getBuilding_fromDB(); #testing
         #     # print("win")
         #     # for i in buildings:
         #     #     print(i)
-        # except:
-        #     print("You Lose")
+        except:
+            print("You Lose")
         return buildings
 
     def getActivities(self)->QTableView:
