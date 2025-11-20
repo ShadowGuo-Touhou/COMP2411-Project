@@ -1,5 +1,6 @@
 import os, sys
 from PyQt6 import *
+from PyQt6 import QtCore
 from PyQt6.QtGui import *
 from PyQt6.QtCore import *
 from PyQt6.QtWidgets import *
@@ -14,7 +15,7 @@ class SystemWindow():
         Initialize the main window
         """
         # Initialize database
-        self.db = SQLProcessor("data.db")
+        self.db = SQLProcessor("P:\\PolyU\\2025 Sem 1\\COMP 2411\\project\\COMP2411-Project\\data.db")
         
         self.__initWindow()
         self.__initTab()
@@ -385,6 +386,7 @@ class SystemWindow():
             data = self.db.select("Activity")
         
         model = TableModel(data)
+        # model.setHeaderData()
         table.setModel(model)
         table.setShowGrid(False)
         return table
@@ -421,7 +423,8 @@ class SystemWindow():
         GROUP BY W.WID, W.Name
         """
         data = self.db.fetch_all(query)
-        self.displayReport(data, "Worker Distribution")
+        header = ["Name","ActivityCount"]
+        self.displayReport(data, "Worker Distribution", header)
 
     def displayManagerWorkload(self):
         """Display manager workload report"""
@@ -433,7 +436,8 @@ class SystemWindow():
         GROUP BY M.MID, M.Name
         """
         data = self.db.fetch_all(query)
-        self.displayReport(data, "Manager Workload")
+        header = ["Name","Locations","Activities"]
+        self.displayReport(data, "Manager Workload", header)
 
     def displayOutSource(self):
         """Display outsource summary report"""
@@ -443,10 +447,11 @@ class SystemWindow():
         LEFT JOIN WorkOn W ON C.CompanyID = W.CompanyID
         GROUP BY C.CompanyID, C.Name
         """
+        header = ["Company Name","Contract Count", "Total Payment"]
         data = self.db.fetch_all(query)
-        self.displayReport(data, "Outsource Summary")
+        self.displayReport(data, "Outsource Summary", header)
 
-    def displayReport(self, data, title):
+    def displayReport(self, data, title, header):
         """Display a report in the results area"""
         # Clear previous results
         while self._resultTabLayout.count() > 1:
@@ -457,6 +462,7 @@ class SystemWindow():
         if data:
             table = QTableView()
             model = TableModel(data)
+            model.setHeaderLabel(header)
             table.setModel(model)
             self._resultTabLayout.addWidget(table)
         else:
@@ -1222,6 +1228,8 @@ class TableModel(QAbstractTableModel):
     def __init__(self, data):
         super().__init__()
         self._data = data if data else []
+        self._horizontal_headers = [""] * len(data[0]) if data else []
+        self._vertical_headers = [""] * len(data) if data else []
 
     def data(self, index, role):
         if role == Qt.ItemDataRole.DisplayRole:
@@ -1240,6 +1248,25 @@ class TableModel(QAbstractTableModel):
     
     def columnCount(self, index):
         return len(self._data[0]) if self._data else 0
+
+    def setHeaderData(self, section, orientation, value, role=QtCore.Qt.ItemDataRole.EditRole):
+            if orientation == QtCore.Qt.Orientation.Horizontal and role in (QtCore.Qt.ItemDataRole.DisplayRole, QtCore.Qt.ItemDataRole.EditRole):
+                if 0 <= section < len(self._horizontal_headers):
+                    self._horizontal_headers[section] = value
+                    self.headerDataChanged.emit(orientation, section, section)
+                    return True
+            return super().setHeaderData(section, orientation, value, role)
+
+    def headerData(self, section, orientation, role=QtCore.Qt.ItemDataRole.DisplayRole):
+            if orientation == QtCore.Qt.Orientation.Horizontal and role == QtCore.Qt.ItemDataRole.DisplayRole:
+                if 0 <= section < len(self._horizontal_headers):
+                    return self._horizontal_headers[section]
+
+    
+    def setHeaderLabel(self, header:list):
+        for i in range(len(header)):    
+            self.setHeaderData(i, Qt.Orientation.Horizontal, header[i])
+            
 
 
 if __name__ == '__main__':
