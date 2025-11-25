@@ -2,6 +2,7 @@ import sqlite3
 import random
 from datetime import datetime, timedelta
 from faker import Faker
+# Assuming config.py exists in the same directory as per your import statement
 from . import config
 
 # Initialize Faker
@@ -11,63 +12,81 @@ db_name = config.DB_NAME
 
 def get_db_connection():
     conn = sqlite3.connect(db_name)
+    # Enforce foreign key constraints
     conn.execute("PRAGMA foreign_keys = ON;")
     return conn
 
 def clear_data(cursor):
-    """Deletes existing data in reverse order of dependencies."""
-    print("Clearing existing data...")
-    tables = ["Assigned", "Task", "Activity", "Location", "Worker", "Manager", "Company"]
-    for table in tables:
-        cursor.execute(f"DELETE FROM {table}")
-
-def generate_managers(cursor, num_mid_managers=10):
     """
-    Generates managers.
-    According to PDF: 
-    1. Executive Officer (Supervisor is NULL).
-    2. Mid-level Managers (Supervisor is Executive Officer).
+    Deletes existing data in reverse order of dependencies to avoid FK violations.
+    """
+    print("Clearing existing data...")
+    # Order matters: Child tables first, then Parent tables
+    tables = [
+        "Assigned", 
+        "TaskChemicals", 
+        "Task", 
+        "WorkOn", 
+        "HoldIn", 
+        "Activity", 
+        "Location", 
+        "Worker", 
+        "Manager", 
+        "Company"
+    ]
+    for table in tables:
+        try:
+            cursor.execute(f"DELETE FROM {table}")
+            # Reset auto-increment counters if using SQLite
+            cursor.execute(f"DELETE FROM sqlite_sequence WHERE name='{table}'")
+        except sqlite3.OperationalError:
+            print(f"Warning: Table {table} might not exist or could not be cleared.")
+
+def generate_managers(cursor, num_managers=10):
+    """
+    Generates a hierarchy of managers.
+    1 Executive (Top level) -> Mid-level Managers -> Junior Managers.
     """
     print("Generating Managers...")
-    
-    # 1. Create the Executive Officer (The Big Boss)
-    # MID, Name, Salary, Contact, Supervisor
+    manager_ids = []
+
+    # 1. Create the Executive Officer (Supervisor is NULL)
     exec_name = fake.name()
     cursor.execute(
         "INSERT INTO Manager (Name, Salary, Contact, Supervisor) VALUES (?, ?, ?, ?)",
-        (exec_name, 150000, int(fake.msisdn()[:10]), None)
+        (exec_name, random.randint(80000, 120000), int(fake.msisdn()[:8]), None)
     )
     exec_id = cursor.lastrowid
-    print(f"  - Executive Officer created: {exec_name} (MID: {exec_id})")
+    manager_ids.append(exec_id)
+    print(f"  - Executive created: {exec_name} (ID: {exec_id})")
 
-    # 2. Create Mid-level Managers
-    manager_ids = []
-    for _ in range(num_mid_managers):
+    # 2. Create remaining managers reporting to existing managers
+    for _ in range(num_managers - 1):
         name = fake.name()
-        salary = random.randint(50000, 90000)
-        contact = int(fake.msisdn()[:10])
+        salary = random.randint(45000, 75000)
+        contact = int(fake.msisdn()[:8])
+        # Pick a supervisor from those already created (creates a tree structure)
+        supervisor_id = random.choice(manager_ids)
         
         cursor.execute(
             "INSERT INTO Manager (Name, Salary, Contact, Supervisor) VALUES (?, ?, ?, ?)",
-            (name, salary, contact, exec_id)
+            (name, salary, contact, supervisor_id)
         )
         manager_ids.append(cursor.lastrowid)
     
     return manager_ids
 
-def generate_workers(cursor, manager_ids, num_workers=50):
+def generate_workers(cursor, manager_ids, num_workers=30):
     """
-    Generates workers.
-    According to PDF: Workers are supervised by Mid-level Managers.
+    Generates workers assigned to supervisors.
     """
     print(f"Generating {num_workers} Workers...")
     worker_ids = []
     
     for _ in range(num_workers):
         name = fake.name()
-        salary = random.randint(15000, 35000)
-        contact = int(fake.msisdn()[:10])
-        # Assign a random mid-level manager as supervisor
+        salary = random.randint(15000, 25000)
+        contact = int(fake.msisdn()[:8])
         supervisor_id = random.choice(manager_ids)
         
         cursor.execute(
@@ -80,91 +99,133 @@ def generate_workers(cursor, manager_ids, num_workers=50):
 
 def generate_locations(cursor, manager_ids):
     """
-    Generates locations (Campus context).
-    According to PDF: Each location has a Supervisor (Manager).
+    Generates locations. 
+    Returns a list of Location Names (since HoldIn uses Name as FK).
     """
     print("Generating Locations...")
-    # PolyU/Campus style names
-    locations = [
-        ("Block Z", "Administrative Building"),
-        ("Block A", "Engineering Faculty"),
-        ("Block V", "Jockey Club Innovation Tower"),
-        ("Library", "Main Library"),
-        ("Canteen", "Student Canteen"),
-        ("Podium", "Public Area"),
-        ("Room 101", "Lecture Hall"),
-        ("Lab 404", "Computer Laboratory"),
-        ("Gym", "Sports Center"),
-        ("Main Gate", "Entrance")
-    ]
+    location_names = []
     
-    for name, facility in locations:
+    # Mix of room codes and descriptive names
+    prefixes = ["PQ", "QT", "Z", "N", "X", "Block "]
+    facilities = ["Corridor", "Laboratory", "Washroom", "Classroom", "Lobby", "Gate", "Square", "Swimming Pool", "Library", "Garden", "Carpark"]
+    
+    for _ in range(20):
+        prefix = random.choice(prefixes)
+        if prefix == "Block ":
+            name = f"{prefix}{random.choice(['A', 'B', 'C', 'L', 'V'])}"
+        else:
+            name = f"{prefix}{random.randint(100, 999)}"
+            
+        facility = random.choice(facilities)
         supervisor_id = random.choice(manager_ids)
+        
         try:
             cursor.execute(
                 "INSERT INTO Location (Name, Facility, Supervisor) VALUES (?, ?, ?)",
                 (name, facility, supervisor_id)
             )
+            location_names.append(name)
         except sqlite3.IntegrityError:
-            pass # Skip duplicates if re-running without clearing
+            # Skip duplicate names generated by random chance
+            continue
+            
+    return location_names
 
 def generate_companies(cursor):
     """Generates outsourcing companies."""
-    print("Generating Outsourcing Companies...")
-    companies = ["CleanCo", "FixItFast", "CampusSecure", "GreenGardens", "TechSupport Pro"]
+    print("Generating Companies...")
+    company_ids = []
+    company_suffixes = ["Services Ltd.", "Facility Mgmt", "Gardening Co.", "Engineering", "Cleaners"]
     
-    for comp_name in companies:
+    for _ in range(5):
+        name = f"{fake.word().capitalize()}{fake.word().capitalize()} {random.choice(company_suffixes)}"
         address = fake.address().replace("\n", ", ")
-        contact = int(fake.msisdn()[:10])
+        contact = int(fake.msisdn()[:8])
+        
         cursor.execute(
             "INSERT INTO Company (Name, Address, Contact) VALUES (?, ?, ?)",
-            (comp_name, address, contact)
+            (name, address, contact)
         )
+        company_ids.append(cursor.lastrowid)
+    return company_ids
 
-def generate_activities_and_tasks(cursor, worker_ids):
+def generate_activities_and_details(cursor, worker_ids, location_names, company_ids):
     """
-    Generates Activities, Tasks, and Assigns Workers.
+    Generates Activities and populates dependent tables:
+    - HoldIn (Activity -> Location)
+    - WorkOn (Activity -> Company)
+    - Task (Activity -> Tasks)
+    - TaskChemicals (Task -> Chemicals)
+    - Assigned (Worker -> Task)
     """
-    print("Generating Activities, Tasks, and Assignments...")
+    print("Generating Activities and Tasks...")
     
-    activity_types = ["Cleaning", "Renovation", "Maintenance", "Inspection"]
+    actions = ["Cleaning", "Inspection", "Repair", "Maintenance", "Deep Clean", "Drill"]
     
-    # Generate 15 Activities
-    for _ in range(15):
-        act_name = f"{random.choice(activity_types)} - {fake.word().capitalize()}"
-        
-        # Generate dates (ISO-8601)
-        start_date_obj = fake.date_this_year()
-        # 30% chance of being ongoing (endDate is NULL)
-        if random.random() < 0.3:
-            end_date_str = None
+    for _ in range(20):
+        # 1. Create Activity
+        act_name = f"{random.choice(actions)} of {fake.word()}"
+        start_date = fake.date_this_year()
+        # 20% chance of 1-day event, otherwise range
+        if random.random() < 0.2:
+            end_date = start_date
         else:
-            end_date_obj = start_date_obj + timedelta(days=random.randint(1, 14))
-            end_date_str = end_date_obj.isoformat()
+            end_date = start_date + timedelta(days=random.randint(1, 10))
             
-        start_date_str = start_date_obj.isoformat()
-        
         cursor.execute(
             "INSERT INTO Activity (Name, startDate, endDate) VALUES (?, ?, ?)",
-            (act_name, start_date_str, end_date_str)
+            (act_name, start_date.isoformat(), end_date.isoformat())
         )
         aid = cursor.lastrowid
         
-        # Generate 1 to 3 Tasks for this Activity
-        num_tasks = random.randint(1, 3)
-        for i in range(num_tasks):
-            task_name = f"Task {i+1}: {fake.bs()}" # Random business jargon as task name
-            equipment = random.choice(["Ladder", "Drill", "Mop", "Vacuum", "Wrench", None])
-            chemicals = random.choice(["Bleach", "Ammonia", "Solvent", None])
-            
+        # 2. HoldIn (Where does this activity happen?)
+        # Pick a random location
+        loc_name = random.choice(location_names)
+        cursor.execute(
+            "INSERT INTO HoldIn (AID, LocationName) VALUES (?, ?)",
+            (aid, loc_name)
+        )
+        
+        # 3. WorkOn (Is it outsourced?)
+        # 50% chance an activity is outsourced to a company
+        if random.random() < 0.5:
+            cid = random.choice(company_ids)
+            payment = random.randint(10000, 50000)
+            quarter = f"2025-Q{random.randint(1, 4)}"
             cursor.execute(
-                "INSERT INTO Task (AID, Name, Equipment, Chemicals) VALUES (?, ?, ?, ?)",
-                (aid, task_name, equipment, chemicals)
+                "INSERT INTO WorkOn (AID, CompanyID, ContractedPayment, ContractedTime) VALUES (?, ?, ?, ?)",
+                (aid, cid, payment, quarter)
             )
             
-            # Assign 1 to 4 Workers to this Task
-            # Constraint: (WID, AID, TaskName) is PK
-            num_assigned = random.randint(1, 4)
+        # 4. Tasks
+        num_tasks = random.randint(1, 3)
+        for i in range(num_tasks):
+            # Task Name must be unique per Activity usually, or just distinct strings
+            task_verbs = ["Sweep", "Mop", "Scrub", "Inspect", "Repair", "Replace", "Vacuum", "Spray"]
+            task_name = f"{random.choice(task_verbs)} {fake.word()}"
+            equipment = random.choice(["Standard tools", "Scrubber", "Pressure washer", "Ladder", "Inspection tools", "Vacuum cleaner"])
+            
+            cursor.execute(
+                "INSERT INTO Task (AID, Name, Equipment) VALUES (?, ?, ?)",
+                (aid, task_name, equipment)
+            )
+            
+            # 5. TaskChemicals
+            # A task might use 0, 1, or 2 chemicals
+            num_chems = random.randint(0, 2)
+            possible_chems = ["Bleach", "Descaler", "Floor wax", "Degreaser", "Anti-mold spray", "Insecticide", "Solvent"]
+            
+            # Ensure unique chemicals per task
+            selected_chems = random.sample(possible_chems, num_chems)
+            for chem in selected_chems:
+                cursor.execute(
+                    "INSERT INTO TaskChemicals (AID, TaskName, Chemicals) VALUES (?, ?, ?)",
+                    (aid, task_name, chem)
+                )
+                
+            # 6. Assigned (Workers)
+            # Assign 1 to 3 workers to this specific task
+            num_assigned = random.randint(1, 3)
             assigned_workers = random.sample(worker_ids, num_assigned)
             
             for wid in assigned_workers:
@@ -178,29 +239,22 @@ def main():
         with get_db_connection() as conn:
             cursor = conn.cursor()
             
-            # 1. Clear old data
             clear_data(cursor)
             
-            # 2. Managers (Executive + Mid-level)
-            manager_ids = generate_managers(cursor, num_mid_managers=8)
-            
-            # 3. Workers
+            manager_ids = generate_managers(cursor, num_managers=10)
             worker_ids = generate_workers(cursor, manager_ids, num_workers=40)
+            location_names = generate_locations(cursor, manager_ids)
+            company_ids = generate_companies(cursor)
             
-            # 4. Locations
-            generate_locations(cursor, manager_ids)
-            
-            # 5. Companies
-            generate_companies(cursor)
-            
-            # 6. Activities, Tasks, and Assignments
-            generate_activities_and_tasks(cursor, worker_ids)
+            generate_activities_and_details(cursor, worker_ids, location_names, company_ids)
             
             conn.commit()
-            print("\nSUCCESS: Database populated with testing data.")
+            print("\nSUCCESS: Database populated with testing data following the new schema.")
             
     except sqlite3.Error as e:
-        print(f"\nERROR: An error occurred: {e}")
+        print(f"\nERROR: Database error: {e}")
+    except Exception as e:
+        print(f"\nERROR: An unexpected error occurred: {e}")
 
 if __name__ == "__main__":
     main()

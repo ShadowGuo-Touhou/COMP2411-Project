@@ -1,4 +1,5 @@
 import sqlite3
+import os
 
 class SQLProcessor:
     def __init__(self, db_path="data.db"):
@@ -6,6 +7,8 @@ class SQLProcessor:
         self.con = sqlite3.connect(db_path)
         self.con.execute("PRAGMA foreign_keys = ON;")
         self.cur = self.con.cursor()
+        self.initialize_database("database/configuration.sql")
+        self.initialize_database("database/testdata.sql")
         
         self.columns = {
             "Manager": ["MID", "Name", "Salary", "Contact", "Supervisor"],
@@ -163,3 +166,25 @@ class SQLProcessor:
     def close(self):
         """Close database connection"""
         self.con.close()
+
+    def initialize_database(self, sql_file_path):
+        """
+        Reads a SQL file and executes the commands to create tables and insert data.
+        """
+        if not os.path.exists(sql_file_path):
+            print(f"Warning: SQL file '{sql_file_path}' not found. Database initialized empty.")
+            return
+
+        try:
+            with open(sql_file_path, 'r', encoding='utf-8') as f:
+                sql_script = f.read()
+            
+            # executescript allows running multiple SQL commands separated by ;
+            self.cur.executescript(sql_script)
+            self.con.commit()
+            print(f"Successfully executed SQL script from {sql_file_path}")
+            
+        except sqlite3.Error as e:
+            print(f"An SQL error occurred: {e}")
+        except Exception as e:
+            print(f"An error occurred reading the file: {e}")
