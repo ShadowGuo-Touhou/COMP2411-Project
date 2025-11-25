@@ -2,23 +2,52 @@ import sqlite3
 import random
 from datetime import datetime, timedelta
 from faker import Faker
-# Assuming config.py exists in the same directory as per your import statement
-from . import config
+import os
+import sys
+
+# Try to import config, handling different execution contexts
+try:
+    from . import config
+except ImportError:
+    try:
+        import config
+    except ImportError:
+        # Fallback if config not found, assuming standard name
+        class Config:
+            DB_NAME = "data.db"
+        config = Config()
 
 # Initialize Faker
 fake = Faker()
 
-db_name = config.DB_NAME
-
 def get_db_connection():
-    conn = sqlite3.connect(db_name)
-    # Enforce foreign key constraints
+    """
+    Establishes a connection to the database.
+    """
+    # If the script is run from database/ directory, adjust path to find data.db in root
+    db_path = config.DB_NAME
+    if not os.path.exists(db_path) and os.path.exists(os.path.join("..", db_path)):
+        db_path = os.path.join("..", db_path)
+        
+    conn = sqlite3.connect(db_path)
+    # Enforce foreign key constraints (Critical for the schema)
     conn.execute("PRAGMA foreign_keys = ON;")
     return conn
 
 def clear_data(cursor):
     """
     Deletes existing data in reverse order of dependencies to avoid FK violations.
+    Schema Dependencies:
+    - Assigned -> Worker, Task
+    - TaskChemicals -> Task
+    - Task -> Activity
+    - WorkOn -> Activity, Company
+    - HoldIn -> Activity, Location
+    - Activity -> (None)
+    - Location -> Manager
+    - Worker -> Manager
+    - Manager -> Manager (Self-referencing)
+    - Company -> (None)
     """
     print("Clearing existing data...")
     # Order matters: Child tables first, then Parent tables
@@ -38,14 +67,17 @@ def clear_data(cursor):
         try:
             cursor.execute(f"DELETE FROM {table}")
             # Reset auto-increment counters if using SQLite
-            cursor.execute(f"DELETE FROM sqlite_sequence WHERE name='{table}'")
-        except sqlite3.OperationalError:
-            print(f"Warning: Table {table} might not exist or could not be cleared.")
+            try:
+                cursor.execute(f"DELETE FROM sqlite_sequence WHERE name='{table}'")
+            except sqlite3.OperationalError:
+                pass # sqlite_sequence might not exist or table might not use autoincrement
+        except sqlite3.OperationalError as e:
+            print(f"Warning: Could not clear table {table}: {e}")
 
 def generate_managers(cursor, num_managers=10):
     """
     Generates a hierarchy of managers.
-    1 Executive (Top level) -> Mid-level Managers -> Junior Managers.
+    Schema: Manager(MID, Name, Salary, Contact, Supervisor)
     """
     print("Generating Managers...")
     manager_ids = []
@@ -79,6 +111,7 @@ def generate_managers(cursor, num_managers=10):
 def generate_workers(cursor, manager_ids, num_workers=30):
     """
     Generates workers assigned to supervisors.
+    Schema: Worker(WID, Name, Salary, Contact, Supervisor)
     """
     print(f"Generating {num_workers} Workers...")
     worker_ids = []
@@ -100,7 +133,7 @@ def generate_workers(cursor, manager_ids, num_workers=30):
 def generate_locations(cursor, manager_ids):
     """
     Generates locations. 
-    Returns a list of Location Names (since HoldIn uses Name as FK).
+    Schema: Location(Name, Facility, Supervisor)
     """
     print("Generating Locations...")
     location_names = []
@@ -109,7 +142,7 @@ def generate_locations(cursor, manager_ids):
     prefixes = ["PQ", "QT", "Z", "N", "X", "Block "]
     facilities = ["Corridor", "Laboratory", "Washroom", "Classroom", "Lobby", "Gate", "Square", "Swimming Pool", "Library", "Garden", "Carpark"]
     
-    for _ in range(20):
+    for _ in range(100):
         prefix = random.choice(prefixes)
         if prefix == "Block ":
             name = f"{prefix}{random.choice(['A', 'B', 'C', 'L', 'V'])}"
@@ -132,12 +165,15 @@ def generate_locations(cursor, manager_ids):
     return location_names
 
 def generate_companies(cursor):
-    """Generates outsourcing companies."""
+    """
+    Generates outsourcing companies.
+    Schema: Company(CompanyID, Name, Address, Contact)
+    """
     print("Generating Companies...")
     company_ids = []
     company_suffixes = ["Services Ltd.", "Facility Mgmt", "Gardening Co.", "Engineering", "Cleaners"]
     
-    for _ in range(5):
+    for _ in range(10):
         name = f"{fake.word().capitalize()}{fake.word().capitalize()} {random.choice(company_suffixes)}"
         address = fake.address().replace("\n", ", ")
         contact = int(fake.msisdn()[:8])
@@ -151,22 +187,24 @@ def generate_companies(cursor):
 
 def generate_activities_and_details(cursor, worker_ids, location_names, company_ids):
     """
-    Generates Activities and populates dependent tables:
-    - HoldIn (Activity -> Location)
-    - WorkOn (Activity -> Company)
-    - Task (Activity -> Tasks)
-    - TaskChemicals (Task -> Chemicals)
-    - Assigned (Worker -> Task)
+    Generates Activities and populates dependent tables.
+    Schema Covered:
+    - Activity(AID, Name, startDate, endDate)
+    - HoldIn(AID, LocationName)
+    - WorkOn(AID, CompanyID, ContractedPayment, ContractedTime)
+    - Task(AID, Name, Equipment)
+    - TaskChemicals(AID, TaskName, Chemicals)
+    - Assigned(WID, AID, TaskName)
     """
     print("Generating Activities and Tasks...")
     
     actions = ["Cleaning", "Inspection", "Repair", "Maintenance", "Deep Clean", "Drill"]
     
-    for _ in range(20):
+    for _ in range(100): # Increased from 20 to 30 for more data
         # 1. Create Activity
         act_name = f"{random.choice(actions)} of {fake.word()}"
         start_date = fake.date_this_year()
-        # 20% chance of 1-day event, otherwise range
+        # Ensure endDate >= startDate as per schema CHECK constraint
         if random.random() < 0.2:
             end_date = start_date
         else:
@@ -180,15 +218,16 @@ def generate_activities_and_details(cursor, worker_ids, location_names, company_
         
         # 2. HoldIn (Where does this activity happen?)
         # Pick a random location
-        loc_name = random.choice(location_names)
-        cursor.execute(
-            "INSERT INTO HoldIn (AID, LocationName) VALUES (?, ?)",
-            (aid, loc_name)
-        )
+        if location_names:
+            loc_name = random.choice(location_names)
+            cursor.execute(
+                "INSERT INTO HoldIn (AID, LocationName) VALUES (?, ?)",
+                (aid, loc_name)
+            )
         
         # 3. WorkOn (Is it outsourced?)
         # 50% chance an activity is outsourced to a company
-        if random.random() < 0.5:
+        if random.random() < 0.5 and company_ids:
             cid = random.choice(company_ids)
             payment = random.randint(10000, 50000)
             quarter = f"2025-Q{random.randint(1, 4)}"
@@ -200,9 +239,9 @@ def generate_activities_and_details(cursor, worker_ids, location_names, company_
         # 4. Tasks
         num_tasks = random.randint(1, 3)
         for i in range(num_tasks):
-            # Task Name must be unique per Activity usually, or just distinct strings
+            # Task Name must be unique per Activity (PK: AID, Name)
             task_verbs = ["Sweep", "Mop", "Scrub", "Inspect", "Repair", "Replace", "Vacuum", "Spray"]
-            task_name = f"{random.choice(task_verbs)} {fake.word()}"
+            task_name = f"{random.choice(task_verbs)} {fake.word()} {i+1}" # Added index to ensure uniqueness within activity
             equipment = random.choice(["Standard tools", "Scrubber", "Pressure washer", "Ladder", "Inspection tools", "Vacuum cleaner"])
             
             cursor.execute(
@@ -210,12 +249,12 @@ def generate_activities_and_details(cursor, worker_ids, location_names, company_
                 (aid, task_name, equipment)
             )
             
-            # 5. TaskChemicals
+            # 5. TaskChemicals (FK: AID, TaskName)
             # A task might use 0, 1, or 2 chemicals
             num_chems = random.randint(0, 2)
             possible_chems = ["Bleach", "Descaler", "Floor wax", "Degreaser", "Anti-mold spray", "Insecticide", "Solvent"]
             
-            # Ensure unique chemicals per task
+            # Ensure unique chemicals per task (PK: AID, TaskName, Chemicals)
             selected_chems = random.sample(possible_chems, num_chems)
             for chem in selected_chems:
                 cursor.execute(
@@ -223,16 +262,17 @@ def generate_activities_and_details(cursor, worker_ids, location_names, company_
                     (aid, task_name, chem)
                 )
                 
-            # 6. Assigned (Workers)
+            # 6. Assigned (Workers) (FK: WID, AID, TaskName)
             # Assign 1 to 3 workers to this specific task
             num_assigned = random.randint(1, 3)
-            assigned_workers = random.sample(worker_ids, num_assigned)
-            
-            for wid in assigned_workers:
-                cursor.execute(
-                    "INSERT INTO Assigned (WID, AID, TaskName) VALUES (?, ?, ?)",
-                    (wid, aid, task_name)
-                )
+            if worker_ids:
+                assigned_workers = random.sample(worker_ids, min(len(worker_ids), num_assigned))
+                
+                for wid in assigned_workers:
+                    cursor.execute(
+                        "INSERT INTO Assigned (WID, AID, TaskName) VALUES (?, ?, ?)",
+                        (wid, aid, task_name)
+                    )
 
 def main():
     try:
@@ -255,6 +295,8 @@ def main():
         print(f"\nERROR: Database error: {e}")
     except Exception as e:
         print(f"\nERROR: An unexpected error occurred: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
     main()
