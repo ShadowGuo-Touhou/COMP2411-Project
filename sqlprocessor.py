@@ -3,6 +3,7 @@ import os
 
 class SQLProcessor:
     def __init__(self, db_path="data.db"):
+        
         self.db_path = db_path
         self.con = sqlite3.connect(db_path)
         self.con.execute("PRAGMA foreign_keys = ON;")
@@ -94,12 +95,7 @@ class SQLProcessor:
         command = f"DELETE FROM {table} WHERE {condition}"
         return self.execute(command) is not None
 
-    def select(self, table, attributes="*", condition="1=1"):
-        """Select data from table"""
-        command = f"SELECT {attributes} FROM {table} WHERE {condition}"
-        return self.fetch_all(command)
-
-    def queryForActivity(self,location,chemicals=None):
+    def queryForActivity(self, location, chemicals=None):
         if chemicals is None:
             chemicals = self.harmfulChemicals
         query = """
@@ -163,8 +159,47 @@ class SQLProcessor:
         """Get all locations"""
         return self.fetch_all("SELECT Name FROM Location")
 
+    def getWorkerDistribution(self):
+        """Get worker distribution report data"""
+        query = """
+        SELECT W.Name, COUNT(A.AID) as ActivityCount 
+        FROM Worker W 
+        LEFT JOIN Assigned A ON W.WID = A.WID 
+        GROUP BY W.WID, W.Name
+        """
+        return self.fetch_all(query)
+
+    def getManagerWorkload(self):
+        """Get manager workload report data"""
+        query = """
+        SELECT M.Name, COUNT(DISTINCT L.Name) as Locations, COUNT(DISTINCT A.AID) as Activities
+        FROM Manager M 
+        LEFT JOIN Location L ON M.MID = L.Supervisor
+        LEFT JOIN Activity A ON M.MID = A.AID
+        GROUP BY M.MID, M.Name
+        """
+        return self.fetch_all(query)
+
+    def getOutsourceSummary(self):
+        """Get outsource summary report data"""
+        query = """
+        SELECT C.Name, COUNT(W.AID) as ContractCount, SUM(W.ContractedPayment) as TotalPayment
+        FROM Company C 
+        LEFT JOIN WorkOn W ON C.CompanyID = W.CompanyID
+        GROUP BY C.CompanyID, C.Name
+        """
+        return self.fetch_all(query)
+
+    def getTableSchema(self, table_name):
+        """Get table schema information"""
+        query = f"SELECT sql FROM sqlite_master WHERE type='table' AND name='{table_name}'"
+        return self.fetch_all(query)
+
     def close(self):
         """Close database connection"""
+<<<<<<< HEAD
+        self.con.close()
+=======
         self.con.close()
 
     def initialize_database(self, sql_file_path):
@@ -188,3 +223,4 @@ class SQLProcessor:
             print(f"An SQL error occurred: {e}")
         except Exception as e:
             print(f"An error occurred reading the file: {e}")
+>>>>>>> dbe19a8c4a5ded4f52375ff65d217eca15d86294
