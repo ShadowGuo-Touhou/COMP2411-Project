@@ -197,9 +197,6 @@ class SQLProcessor:
 
     def close(self):
         """Close database connection"""
-<<<<<<< HEAD
-        self.con.close()
-=======
         self.con.close()
 
     def initialize_database(self, sql_file_path):
@@ -223,4 +220,4 @@ class SQLProcessor:
             print(f"An SQL error occurred: {e}")
         except Exception as e:
             print(f"An error occurred reading the file: {e}")
->>>>>>> dbe19a8c4a5ded4f52375ff65d217eca15d86294
+
