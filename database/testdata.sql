@@ -379,7 +379,7 @@ INSERT INTO WorkOn (AID, CompanyID, ContractedPayment, ContractedTime) VALUES (5
 INSERT INTO WorkOn (AID, CompanyID, ContractedPayment, ContractedTime) VALUES (32, 4, 42930, '2025-Q4');
 
 
--- Assigned（很多，我给你一批，已经避免主键冲突）
+-- Assigned
 INSERT INTO Assigned (WID, AID, TaskName) VALUES (1, 1, 'Sweep & mop');
 INSERT INTO Assigned (WID, AID, TaskName) VALUES (2, 1, 'Sweep & mop');
 INSERT INTO Assigned (WID, AID, TaskName) VALUES (3, 1, 'Disinfect handrails');
@@ -481,5 +481,150 @@ INSERT INTO Assigned (WID, AID, TaskName) VALUES (19, 20, 'Inspect façade');
 INSERT INTO Assigned (WID, AID, TaskName) VALUES (20, 20, 'Inspect façade');
 INSERT INTO Assigned (WID, AID, TaskName) VALUES (1, 20, 'Repair cracked tiles');
 INSERT INTO Assigned (WID, AID, TaskName) VALUES (2, 20, 'Repair cracked tiles');
+
+
+INSERT INTO Task (AID, Name, Equipment) VALUES 
+(41, 'Sensor calibration', 'Calibration tools'),
+(41, 'Safety check', 'Testing equipment'),
+(42, 'Gutter cleaning', 'Ladders and tools'),
+(42, 'Downpipe clearing', 'Drain rods'),
+(43, 'Filter replacement', 'Plumbing tools'),
+(43, 'Sanitization', 'Cleaning equipment'),
+(44, 'Carpet cleaning', 'Carpet cleaner'),
+(44, 'Stain removal', 'Spot treatment tools'),
+(45, 'Sign repair', 'Repair tools'),
+(45, 'Repainting', 'Painting equipment'),
+(46, 'Dust removal', 'Anti-static equipment'),
+(46, 'Equipment check', 'Testing tools'),
+(47, 'Surface repair', 'Repair materials'),
+(47, 'Safety inspection', 'Inspection tools'),
+(48, 'System check', 'Irrigation tools'),
+(48, 'Nozzle cleaning', 'Cleaning tools'),
+(49, 'Waste sorting', 'Sorting equipment'),
+(49, 'Area cleaning', 'Cleaning tools'),
+(50, 'Deep cleaning', 'Cleaning equipment'),
+(50, 'Disinfection', 'Sanitizing equipment');
+
+INSERT INTO TaskChemicals (AID, TaskName, Chemicals) VALUES 
+(41, 'Sensor calibration', 'Contact cleaner'),
+(41, 'Safety check', 'Lubricant'),
+(42, 'Gutter cleaning', 'Algae remover'),
+(42, 'Downpipe clearing', 'Drain cleaner'),
+(43, 'Filter replacement', 'Filter sanitizer'),
+(43, 'Sanitization', 'Disinfectant'),
+(44, 'Carpet cleaning', 'Carpet shampoo'),
+(44, 'Stain removal', 'Stain remover'),
+(45, 'Sign repair', 'Adhesive promoter'),
+(45, 'Repainting', 'Paint thinner'),
+(46, 'Dust removal', 'Anti-static spray'),
+(47, 'Surface repair', 'Rubber coating'),
+(48, 'System check', 'Pipe lubricant'),
+(49, 'Area cleaning', 'Deodorizer'),
+(50, 'Deep cleaning', 'All-purpose cleaner'),
+(50, 'Disinfection', 'Disinfectant fogger');
+
+INSERT INTO TaskChemicals (AID, TaskName, Chemicals) VALUES 
+(41, 'Safety check', 'TNT'),  -- 测试爆炸物检测
+(42, 'Gutter cleaning', 'HCl'),  -- 强酸清洁
+(43, 'Sanitization', 'Bleach solution'),  -- 含氯消毒
+(44, 'Stain removal', 'Solvent cleaner'),  -- 溶剂型去渍剂
+(45, 'Repainting', 'Lead-based primer'),  -- 含铅底漆
+(47, 'Surface repair', 'Chemical adhesive'),  -- 化学粘合剂
+(48, 'Nozzle cleaning', 'Acidic descaler'),  -- 酸性除垢剂
+(49, 'Waste sorting', 'Hazardous waste'),  -- 危险废物
+(50, 'Disinfection', 'NaClO');  -- 次氯酸钠
+
+INSERT INTO Task (AID, Name, Equipment) VALUES 
+(51, 'Tile replacement', 'Installation tools'),
+(51, 'Asbestos check', 'Testing kit'),
+(52, 'Electrical inspection', 'Testing equipment'),
+(52, 'Thermal imaging', 'Thermal camera'),
+(53, 'Pump repair', 'Repair tools'),
+(53, 'Water testing', 'Test kit'),
+(54, 'Hood cleaning', 'Cleaning equipment'),
+(54, 'Grease removal', 'Degreasing tools'),
+(55, 'Pressure washing', 'Pressure washer'),
+(55, 'Surface sealing', 'Sealing equipment'),
+(56, 'Tree assessment', 'Inspection tools'),
+(56, 'Pest control', 'Application equipment'),
+(57, 'Backflow test', 'Testing kit'),
+(57, 'Valve inspection', 'Inspection tools'),
+(58, 'Humidity control', 'Monitoring equipment'),
+(58, 'Mold prevention', 'Treatment equipment'),
+(59, 'Mechanism lubrication', 'Lubrication tools'),
+(59, 'Safety check', 'Testing equipment'),
+(60, 'Floor crystallization', 'Polishing equipment'),
+(60, 'Surface protection', 'Application tools');
+
+INSERT INTO TaskChemicals (AID, TaskName, Chemicals) VALUES 
+(51, 'Asbestos check', 'Asbestos testing kit'),
+(51, 'Tile replacement', 'Tile adhesive'),
+(52, 'Electrical inspection', 'Dielectric grease'),
+(53, 'Pump repair', 'Waterproof sealant'),
+(54, 'Grease removal', 'Degreasing solvent'),
+(55, 'Surface sealing', 'Concrete sealer'),
+(56, 'Pest control', 'Pesticide'),
+(57, 'Backflow test', 'Test dye'),
+(58, 'Mold prevention', 'Desiccant'),
+(59, 'Mechanism lubrication', 'Graphite lubricant'),
+(60, 'Floor crystallization', 'Acidic crystallizer');
+
+INSERT INTO TaskChemicals (AID, TaskName, Chemicals) VALUES 
+(51, 'Asbestos check', 'X-ray'),  -- X射线检测
+(52, 'Electrical inspection', 'PCB oil'),  -- 多氯联苯油
+(53, 'Water testing', 'Chemical reagents'),  -- 化学试剂
+(54, 'Grease removal', 'Caustic soda'),  -- 烧碱
+(55, 'Pressure washing', 'Acidic cleaner'),  -- 酸性清洁剂
+(56, 'Pest control', 'Rat Poison'),  -- 鼠药
+(57, 'Backflow test', 'Chemical tracer'),  -- 化学示踪剂
+(58, 'Mold prevention', 'Toxic fungicide'),  -- 有毒防霉剂
+(59, 'Mechanism lubrication', 'Synthetic lubricant'),  -- 合成润滑剂
+(60, 'Floor crystallization', 'Marble etcher');  -- 大理石蚀刻剂
+
+INSERT INTO Task (AID, Name, Equipment) VALUES 
+(61, 'Gutter guard installation', 'Installation tools'),
+(61, 'Safety inspection', 'Inspection equipment'),
+(62, 'Spill kit replenishment', 'Restocking equipment'),
+(62, 'Safety training', 'Training materials'),
+(63, 'Lighting inspection', 'Testing equipment'),
+(63, 'Rig maintenance', 'Maintenance tools'),
+(64, 'Area sanitation', 'Cleaning equipment'),
+(64, 'Pest control', 'Application equipment'),
+(65, 'Rust treatment', 'Treatment tools'),
+(65, 'Surface protection', 'Coating equipment'),
+(66, 'Boiler check', 'Inspection tools'),
+(66, 'System testing', 'Testing equipment'),
+(67, 'Leaf clearance', 'Clearing equipment'),
+(67, 'Composting', 'Composting tools'),
+(68, 'System audit', 'Audit equipment'),
+(68, 'Security check', 'Testing tools'),
+(69, 'Sign repair', 'Repair tools'),
+(69, 'Electrical work', 'Electrical tools'),
+(70, 'Inventory check', 'Counting equipment'),
+(70, 'Record keeping', 'Documentation tools');
+
+INSERT INTO TaskChemicals (AID, TaskName, Chemicals) VALUES 
+(61, 'Gutter guard installation', 'Adhesive'),
+(62, 'Spill kit replenishment', 'Absorbent material'),
+(63, 'Rig maintenance', 'Lubricant'),
+(64, 'Pest control', 'Insecticide'),
+(65, 'Rust treatment', 'Rust converter'),
+(66, 'Boiler check', 'Water treatment'),
+(67, 'Composting', 'Compost accelerator'),
+(68, 'Security check', 'Testing materials'),
+(69, 'Sign repair', 'Paint'),
+(70, 'Inventory check', 'None');
+
+INSERT INTO TaskChemicals (AID, TaskName, Chemicals) VALUES 
+(61, 'Safety inspection', 'Visual inspection only'),
+(62, 'Safety training', 'Training manuals'),
+(63, 'Lighting inspection', 'Test equipment'),
+(64, 'Area sanitation', 'Mild detergent'),
+(65, 'Surface protection', 'Protective coating'),
+(66, 'System testing', 'Test water'),
+(67, 'Leaf clearance', 'Organic material'),
+(68, 'System audit', 'Software tools'),
+(69, 'Electrical work', 'Insulating material'),
+(70, 'Record keeping', 'Digital records');
 
 COMMIT;

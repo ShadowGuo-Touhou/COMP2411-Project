@@ -22,7 +22,7 @@ class SQLProcessor:
             "WorkOn": ["AID", "CompanyID", "ContractedPayment", "ContactedTime"]
         }
         self.tables = list(self.columns.keys())
-        self.harmfulChemicals = ["Acidic descaler","Bleach solution","TNT","NaClO","HCl","Cockroach Insecticide","Rat Poison","X-ray"]
+        self.harmfulChemicals = ["Acidic descaler","Bleach solution","TNT","NaClO","HCl","Cockroach Insecticide","Rat Poison","Marble etcher","Toxic fungicide","Lead-based primer","Chemical adhesive"]
 
     def execute(self, command, params=None):
         try:
