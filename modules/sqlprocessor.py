@@ -127,12 +127,13 @@ class SQLProcessor:
         FROM Activity A
         JOIN HoldIn H ON A.AID = H.AID
         WHERE H.LocationName = ?
-          AND A.startDate <= ?
-          AND A.endDate >= ?
+          AND ((A.startDate <= ? AND A.startDate>=? )
+          OR (A.endDate >= ? AND A.endDate<=?)
+          OR (A.startDate<=? AND A.endDate>=?) )
         GROUP BY A.AID, A.Name, A.startDate, A.endDate
         """.format(','.join(['?' for _ in chemicals]))
         
-        params = chemicals + [location, startDate, endDate]
+        params = chemicals + [location, startDate, endDate,startDate,endDate,startDate,endDate]
         return self.fetch_all(query, params)
 
     def getHarmfulChemicals(self):
