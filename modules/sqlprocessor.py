@@ -8,8 +8,6 @@ class SQLProcessor:
         self.con = sqlite3.connect(db_path)
         self.con.execute("PRAGMA foreign_keys = ON;")
         self.cur = self.con.cursor()
-        self.initialize_database("database/configuration.sql")
-        self.initialize_database("database/testdata.sql")
         
         self.columns = {
             "Manager": ["MID", "Name", "Salary", "Contact", "Supervisor"],
@@ -162,7 +160,7 @@ class SQLProcessor:
     def getWorkerDistribution(self):
         """Get worker distribution report data"""
         query = """
-        SELECT W.Name, COUNT(A.AID) as ActivityCount 
+        SELECT W.WID, W.Name, COUNT(A.AID) as TaskCount, W.salary
         FROM Worker W 
         LEFT JOIN Assigned A ON W.WID = A.WID 
         GROUP BY W.WID, W.Name
@@ -172,10 +170,10 @@ class SQLProcessor:
     def getManagerWorkload(self):
         """Get manager workload report data"""
         query = """
-        SELECT M.Name, COUNT(DISTINCT L.Name) as Locations, COUNT(DISTINCT A.AID) as Activities
+        SELECT M.MID, M.Name, COUNT(DISTINCT L.Name) as SupervisedLocations, COUNT(DISTINCT W.WID) as SupervisedWorkers, M.salary
         FROM Manager M 
         LEFT JOIN Location L ON M.MID = L.Supervisor
-        LEFT JOIN Activity A ON M.MID = A.AID
+        LEFT JOIN Worker W ON W.Supervisor = M.MID
         GROUP BY M.MID, M.Name
         """
         return self.fetch_all(query)
@@ -183,7 +181,7 @@ class SQLProcessor:
     def getOutsourceSummary(self):
         """Get outsource summary report data"""
         query = """
-        SELECT C.Name, COUNT(W.AID) as ContractCount, SUM(W.ContractedPayment) as TotalPayment
+        SELECT C.CompanyID, C.Name, COUNT(W.AID) as ContractCount, SUM(W.ContractedPayment) as TotalPayment
         FROM Company C 
         LEFT JOIN WorkOn W ON C.CompanyID = W.CompanyID
         GROUP BY C.CompanyID, C.Name
@@ -197,30 +195,4 @@ class SQLProcessor:
 
     def close(self):
         """Close database connection"""
-<<<<<<< HEAD
         self.con.close()
-=======
-        self.con.close()
-
-    def initialize_database(self, sql_file_path):
-        """
-        Reads a SQL file and executes the commands to create tables and insert data.
-        """
-        if not os.path.exists(sql_file_path):
-            print(f"Warning: SQL file '{sql_file_path}' not found. Database initialized empty.")
-            return
-
-        try:
-            with open(sql_file_path, 'r', encoding='utf-8') as f:
-                sql_script = f.read()
-            
-            # executescript allows running multiple SQL commands separated by ;
-            self.cur.executescript(sql_script)
-            self.con.commit()
-            print(f"Successfully executed SQL script from {sql_file_path}")
-            
-        except sqlite3.Error as e:
-            print(f"An SQL error occurred: {e}")
-        except Exception as e:
-            print(f"An error occurred reading the file: {e}")
->>>>>>> dbe19a8c4a5ded4f52375ff65d217eca15d86294
