@@ -29,3 +29,5 @@ Kindly note that:
 4. drag the configuration.sql file in database directory, or manually enter it's absolute path
 5. execute
 6. enter .quit
+
+
